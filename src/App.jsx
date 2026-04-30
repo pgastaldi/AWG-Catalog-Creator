@@ -24,7 +24,7 @@ const COMMANDS = [
 ];
 
 // ─── STORAGE ──────────────────────────────────────────────────────────────────
-const GAS_URL = "https://script.google.com/macros/s/AKfycbzw0Ku_cFR6WG5Y99yPPTLchPQL2n05d4HGJu-bvjgUnHjGFGvQJJiWOn60fbPUQkTktQ/exec";
+const GAS_URL = "https://script.google.com/macros/s/AKfycbwC-lTs30d-VNiwIU1x6BK2lrSRVqM1DkyFPVT4Hb8mg5NyKk2zTdj2Opwf1pOlEieYyA/exec";
 
 async function stGet(k) { try { const r = await window.storage.get(k); return r ? JSON.parse(r.value) : null; } catch { return null; } }
 async function stSet(k, v) { try { await window.storage.set(k, JSON.stringify(v)); } catch {} }
