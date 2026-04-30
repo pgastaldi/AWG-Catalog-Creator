@@ -1007,7 +1007,7 @@ export default function CatalogAgent() {
             value={input}
             onChange={e => setInput(e.target.value)}
             onKeyDown={e => e.key === "Enter" && !e.shiftKey && handleSend()}
-            placeholder='"Crear catálogo Xbox ES" · "Configurar planilla" · "Configurar repositorio" · "Ayuda"'
+            placeholder='"Crear catálogo [Servicio]" · "Listar servicios" · "Modificar juegos" · "Ayuda"'
             style={{ flex:1, padding:"10px 14px", border:"1.5px solid #ddd", borderRadius:10, fontSize:13, outline:"none", fontFamily:"inherit" }}
           />
           <button onClick={handleSend} disabled={loading} style={{ ...btnP, padding:"0 18px", fontSize:16, opacity:loading ? .5 : 1 }}>→</button>
