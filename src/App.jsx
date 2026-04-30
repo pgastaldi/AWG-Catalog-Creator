@@ -24,7 +24,7 @@ const COMMANDS = [
 ];
 
 // ─── STORAGE ──────────────────────────────────────────────────────────────────
-const GAS_URL = "https://script.google.com/macros/s/AKfycbyjbjfIhbbbbJjjVYQfF_eWJXsXw__UHBw9mavucZnl67kMdWa9QQyH1szko-thmsHLUw/exec";
+const GAS_URL = "https://script.google.com/macros/s/AKfycbzw0Ku_cFR6WG5Y99yPPTLchPQL2n05d4HGJu-bvjgUnHjGFGvQJJiWOn60fbPUQkTktQ/exec";
 
 async function stGet(k) { try { const r = await window.storage.get(k); return r ? JSON.parse(r.value) : null; } catch { return null; } }
 async function stSet(k, v) { try { await window.storage.set(k, JSON.stringify(v)); } catch {} }
@@ -32,13 +32,20 @@ async function stSet(k, v) { try { await window.storage.set(k, JSON.stringify(v)
 async function stGetRemote() {
   try {
     const res = await fetch(`${GAS_URL}?action=getAll`);
-    return await res.json();
+    const text = await res.text();
+    // Si GAS devuelve HTML (error de permisos, script mal desplegado, etc.)
+    if (text.trim().startsWith("<")) {
+      console.error("GAS devolvió HTML en vez de JSON. ¿Está desplegado como app web con acceso 'Cualquier usuario'?", text.slice(0, 300));
+      return null;
+    }
+    return JSON.parse(text);
   } catch (e) {
-    console.error("Error cargando datos remotos", e);
+    console.error("GAS GET error:", e.message);
     return null;
   }
 }
 
+// Retorna true si el request llegó, false si hubo error de red
 async function stSetRemote(action, data) {
   try {
     await fetch(GAS_URL, {
@@ -47,8 +54,10 @@ async function stSetRemote(action, data) {
       headers: { "Content-Type": "text/plain;charset=utf-8" },
       body: JSON.stringify({ action, data }),
     });
+    return true;
   } catch (e) {
-    console.error("Error guardando datos", e);
+    console.error("GAS POST error:", e.message);
+    return false;
   }
 }
 
@@ -496,6 +505,9 @@ export default function CatalogAgent() {
   // Last deploy
   const [lastDeployUrl, setLastDeployUrl] = useState(null);
 
+  // GAS connection: null=cargando, true=ok, false=error
+  const [gasConnected, setGasConnected] = useState(null);
+
   const bottomRef = useRef(null);
   const C = "#7c3aed";
 
@@ -503,12 +515,15 @@ export default function CatalogAgent() {
   (async () => {
     const remoteData = await stGetRemote();
     if (remoteData) {
+      setGasConnected(true);
       if (remoteData.services) setServices(remoteData.services);
       const cfg = remoteData.config || {};
       if (cfg.sheetUrl)  setSheetUrl(cfg.sheetUrl);
       if (cfg.repoOwner) setRepoOwner(cfg.repoOwner);
       if (cfg.repoName)  setRepoName(cfg.repoName);
       if (cfg.repoToken) setRepoToken(cfg.repoToken);
+    } else {
+      setGasConnected(false);
     }
     setServicesLoading(false);
   })();
@@ -624,42 +639,46 @@ export default function CatalogAgent() {
     };
 
     setServices(updatedServices);
-    await stSet("svcs9", updatedServices); // Mantenemos local por backup
-    await stSetRemote("saveServices", updatedServices); // <--- ENVÍO A SHEETS
-    
+    await stSet("svcs9", updatedServices);
+    const ok = await stSetRemote("saveServices", updatedServices);
+    if (!ok) setGasConnected(false);
+    else setGasConnected(true);
+
     setShowForm(null);
-    setMessages(m => [...m, { role:"agent", type:"saved", data:form.name }]);
+    setMessages(m => [...m, { role:"agent", type: ok ? "saved" : "saved_local", data:form.name }]);
   }
 
   async function saveSheetConfig() {
     const url = sheetForm.trim();
     setSheetUrl(url);
     await stSet("sheetUrl", url);
-    
-    // Actualizamos la config global en Sheets
-    await stSetRemote("saveConfig", { 
-      sheetUrl: url, repoOwner, repoName, repoToken 
+
+    const ok = await stSetRemote("saveConfig", {
+      sheetUrl: url, repoOwner, repoName, repoToken
     });
-    
+    if (!ok) setGasConnected(false);
+    else setGasConnected(true);
+
     setShowForm(null);
-    setMessages(m => [...m, { role:"agent", type:"sheet_saved", data:url }]);
+    setMessages(m => [...m, { role:"agent", type: ok ? "sheet_saved" : "sheet_saved_local", data:url }]);
   }
 
   async function saveRepoConfig() {
     const { owner, repo, token } = repoForm;
     setRepoOwner(owner); setRepoName(repo); setRepoToken(token);
-    
+
     await stSet("repoOwner", owner);
     await stSet("repoName", repo);
     await stSet("repoToken", token);
-    
-    // Actualizamos la config global en Sheets
-    await stSetRemote("saveConfig", { 
-      sheetUrl, repoOwner: owner, repoName: repo, repoToken: token 
+
+    const ok = await stSetRemote("saveConfig", {
+      sheetUrl, repoOwner: owner, repoName: repo, repoToken: token
     });
-    
+    if (!ok) setGasConnected(false);
+    else setGasConnected(true);
+
     setShowForm(null);
-    setMessages(m => [...m, { role:"agent", type:"repo_saved", data:`${owner}/${repo}` }]);
+    setMessages(m => [...m, { role:"agent", type: ok ? "repo_saved" : "repo_saved_local", data:`${owner}/${repo}` }]);
   }
 
   function handleImgUpload(field, e) {
@@ -732,19 +751,32 @@ export default function CatalogAgent() {
     if (type === "form_edit")  return <AgBubble key={i}>Editando <strong>{data}</strong>...</AgBubble>;
     if (type === "sheet_form") return <AgBubble key={i}>Abriendo configuración del Google Sheet...</AgBubble>;
     if (type === "repo_form")  return <AgBubble key={i}>Abriendo configuración del repositorio de GitHub...</AgBubble>;
-    if (type === "saved")      return <AgBubble key={i}>Servicio <strong>{data}</strong> guardado.</AgBubble>;
+    if (type === "saved")      return <AgBubble key={i}>Servicio <strong>{data}</strong> guardado en Google Sheets.</AgBubble>;
+    if (type === "saved_local") return <AgBubble key={i}><span style={{color:"#c00"}}>⚠️ Servicio <strong>{data}</strong> guardado solo localmente — no se pudo conectar con Google Sheets. Revisá la consola (F12) para ver el error.</span></AgBubble>;
     if (type === "deleted")    return <AgBubble key={i}>Servicio <strong>{data}</strong> eliminado.</AgBubble>;
 
     if (type === "sheet_saved") return (
       <AgBubble key={i}>
-        <div>✅ Planilla configurada.</div>
+        <div>✅ Planilla configurada y guardada en Google Sheets.</div>
+        <div style={{ fontSize:11, color:"#888", marginTop:4, wordBreak:"break-all" }}>{data}</div>
+      </AgBubble>
+    );
+    if (type === "sheet_saved_local") return (
+      <AgBubble key={i}>
+        <div style={{color:"#c00"}}>⚠️ Planilla guardada solo localmente — fallo la conexión con Google Sheets.</div>
         <div style={{ fontSize:11, color:"#888", marginTop:4, wordBreak:"break-all" }}>{data}</div>
       </AgBubble>
     );
     if (type === "repo_saved") return (
       <AgBubble key={i}>
-        <div>✅ Repositorio configurado: <strong>{data}</strong></div>
+        <div>✅ Repositorio configurado y guardado en Google Sheets: <strong>{data}</strong></div>
         <div style={{ fontSize:11, color:"#888", marginTop:4 }}>Las webs se publicarán en <code>https://{data.split("/")[0]}.github.io/{data.split("/")[1]}/[servicio]/</code></div>
+      </AgBubble>
+    );
+    if (type === "repo_saved_local") return (
+      <AgBubble key={i}>
+        <div style={{color:"#c00"}}>⚠️ Repositorio guardado solo localmente — fallo la conexión con Google Sheets.</div>
+        <div style={{ fontSize:11, color:"#888", marginTop:4 }}>{data}</div>
       </AgBubble>
     );
 
@@ -809,6 +841,11 @@ export default function CatalogAgent() {
         </div>
         {/* Status pills */}
         <div style={{ marginLeft:"auto", display:"flex", gap:6, flexWrap:"wrap", justifyContent:"flex-end" }}>
+          <StatusPill
+            label="GAS"
+            value={gasConnected === null ? "conectando…" : gasConnected ? "conectado" : "sin conexión"}
+            ok={gasConnected === true}
+          />
           <StatusPill label="Sheet" value={sheetUrl ? "configurada" : null} ok={!!sheetUrl}/>
           <StatusPill label="GitHub" value={repoOwner && repoName ? `${repoOwner}/${repoName}` : null} ok={!!(repoOwner && repoName && repoToken)}/>
         </div>
