@@ -509,6 +509,7 @@ export default function CatalogAgent() {
 
   // GAS connection: null=cargando, true=ok, false=error
   const [gasConnected, setGasConnected] = useState(null);
+  const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' && window.innerWidth < 600);
 
   const bottomRef = useRef(null);
   const C = "#1200b7";
@@ -532,6 +533,11 @@ export default function CatalogAgent() {
 }, []);
 
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior:"smooth" }); }, [messages, showForm, lastDeployUrl]);
+  useEffect(() => {
+    const onResize = () => setIsMobile(window.innerWidth < 600);
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
 
   async function saveServices(s) { setServices(s); await stSet("svcs9", s); }
   function findSvc(q) { const t = q.toLowerCase(); return Object.entries(services).find(([,s]) => s.alias.some(a => t.includes(a))) || null; }
@@ -712,7 +718,7 @@ export default function CatalogAgent() {
     return (
       <div style={{ display:"flex", gap:10, marginBottom:12, alignItems:"flex-start" }}>
         <div style={{ width:32, height:32, borderRadius:"50%", background:C, display:"flex", alignItems:"center", justifyContent:"center", color:"#fff", fontSize:13, fontWeight:700, flexShrink:0 }}>A</div>
-        <div style={{ background:"#f4f0ff", borderRadius:"4px 16px 16px 16px", padding:"12px 15px", maxWidth:"86%", fontSize:13, color:"#1a1a2e", lineHeight:1.65 }}>{children}</div>
+        <div style={{ background:"#f4f0ff", borderRadius:"4px 16px 16px 16px", padding:"12px 15px", maxWidth: isMobile ? "92%" : "86%", fontSize:13, color:"#1a1a2e", lineHeight:1.65 }}>{children}</div>
       </div>
     );
   }
@@ -721,7 +727,7 @@ export default function CatalogAgent() {
   function renderMsg(msg, i) {
     if (msg.role === "user") return (
       <div key={i} style={{ display:"flex", justifyContent:"flex-end", marginBottom:12 }}>
-        <div style={{ background:C, color:"#fff", borderRadius:"16px 16px 4px 16px", padding:"10px 15px", maxWidth:"70%", fontSize:13, lineHeight:1.5 }}>{msg.text}</div>
+        <div style={{ background:C, color:"#fff", borderRadius:"16px 16px 4px 16px", padding:"10px 15px", maxWidth: isMobile ? "85%" : "70%", fontSize:13, lineHeight:1.5 }}>{msg.text}</div>
       </div>
     );
     const { type, data } = msg;
@@ -844,26 +850,26 @@ export default function CatalogAgent() {
     <div style={{ display:"flex", flexDirection:"column", height:"100vh", background:"#f9f7ff", fontFamily:"system-ui,sans-serif", overflow:"hidden" }}>
 
       {/* Header */}
-      <div style={{ background:C, color:"#fff", padding:"11px 18px", display:"flex", alignItems:"center", gap:12, flexShrink:0 }}>
+      <div style={{ background:C, color:"#fff", padding:"11px 18px", display:"flex", alignItems:"center", gap:12, flexShrink:0, flexWrap:"wrap" }}>
         <div style={{ width:34, height:34, borderRadius:8, background:"rgba(255,255,255,.2)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:17, flexShrink:0 }}>🎮</div>
-        <div>
+        <div style={{ flex:1 }}>
           <div style={{ fontWeight:700, fontSize:15 }}>AWG Catalog Maker</div>
-          <div style={{ fontSize:11, opacity:.7 }}>Cloud gaming catalog creator service</div>
+          {!isMobile && <div style={{ fontSize:11, opacity:.7 }}>Cloud gaming catalog creator service</div>}
         </div>
         {/* Status pills */}
-        <div style={{ marginLeft:"auto", display:"flex", gap:6, flexWrap:"wrap", justifyContent:"flex-end" }}>
+        <div style={{ marginLeft: isMobile ? 0 : "auto", width: isMobile ? "100%" : "auto", display:"flex", gap:6, flexWrap:"wrap", justifyContent: isMobile ? "flex-start" : "flex-end" }}>
           <StatusPill
             label="GAS"
-            value={gasConnected === null ? "conectando…" : gasConnected ? "conectado" : "sin conexión"}
+            value={gasConnected === null ? "…" : gasConnected ? "ok" : "error"}
             ok={gasConnected === true}
           />
-          <StatusPill label="Sheet" value={sheetUrl ? "configurada" : null} ok={!!sheetUrl}/>
-          <StatusPill label="GitHub" value={repoOwner && repoName ? `${repoOwner}/${repoName}` : null} ok={!!(repoOwner && repoName && repoToken)}/>
+          <StatusPill label="Sheet" value={sheetUrl ? "ok" : null} ok={!!sheetUrl}/>
+          <StatusPill label="GitHub" value={repoOwner && repoName ? (isMobile ? "ok" : `${repoOwner}/${repoName}`) : null} ok={!!(repoOwner && repoName && repoToken)}/>
         </div>
       </div>
 
       {/* Messages */}
-      <div style={{ flex:1, overflowY:"auto", padding:"16px 20px" }}>
+      <div style={{ flex:1, overflowY:"auto", padding: isMobile ? "12px 12px" : "16px 20px" }}>
         {messages.map((m, i) => renderMsg(m, i))}
 
         {loading && (
@@ -888,7 +894,7 @@ export default function CatalogAgent() {
           <div style={{ background:"#fff", border:"1.5px solid #e0d7ff", borderRadius:12, padding:20, marginBottom:16, maxHeight:"70vh", overflowY:"auto" }}>
             <div style={{ fontWeight:700, fontSize:15, marginBottom:4, color:C }}>{editKey ? "Editar servicio" : "Nuevo servicio"}</div>
             <span style={secLbl}>Identidad</span>
-            <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:"0 14px" }}>
+            <div style={{ display:"grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap:"0 14px" }}>
               <div><label style={lblSt}>Nombre *</label><input style={fldSt} value={form.name} onChange={e => setForm(f => ({...f, name:e.target.value}))} placeholder="Xbox Cloud Gaming"/></div>
               <div><label style={lblSt}>Alias (coma)</label><input style={fldSt} value={form.alias} onChange={e => setForm(f => ({...f, alias:e.target.value}))} placeholder="xbox, xcloud"/></div>
               <div>
@@ -900,7 +906,7 @@ export default function CatalogAgent() {
               <div><label style={lblSt}>Link "Jugar ahora" (URL del servicio)</label><input style={fldSt} type="url" value={form.link} onChange={e => setForm(f => ({...f, link:e.target.value}))} placeholder="https://www.xbox.com/play"/></div>
             </div>
             <span style={secLbl}>Branding</span>
-            <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:"0 14px" }}>
+            <div style={{ display:"grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap:"0 14px" }}>
               {[
                 ["Color principal (accent, botones, badges)", "brandColor",  "#7c3aed"],
                 ["Color de fondo de la web",                  "bgColor",     "#0a0a0f"],
@@ -931,7 +937,7 @@ export default function CatalogAgent() {
                 Dejalo en "auto" para que se calcule automáticamente según la luminancia del fondo.
               </div>
             </div>
-            <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:"0 14px" }}>
+            <div style={{ display:"grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap:"0 14px" }}>
               {[["Logo del servicio (web) — PNG transparente","logoImg"],["Portada del PDF","coverImg"]].map(([lbl,fld]) => (
                 <div key={fld}><label style={lblSt}>{lbl}</label>
                   <input type="file" accept="image/*" onChange={e => handleImgUpload(fld, e)} style={{ fontSize:12, width:"100%" }}/>
@@ -939,7 +945,7 @@ export default function CatalogAgent() {
                 </div>
               ))}
             </div>
-            <div style={{ maxWidth:"50%", paddingRight:7 }}>
+            <div style={{ maxWidth: isMobile ? "100%" : "50%", paddingRight: isMobile ? 0 : 7 }}>
               <label style={lblSt}>Contraportada del PDF</label>
               <input type="file" accept="image/*" onChange={e => handleImgUpload("backImg", e)} style={{ fontSize:12, width:"100%" }}/>
               {form.backImg && <img src={form.backImg} style={{ width:80, height:50, objectFit:"cover", borderRadius:4, marginTop:5, border:"1px solid #eee" }}/>}
@@ -976,7 +982,7 @@ export default function CatalogAgent() {
               El repo debe tener <strong>GitHub Pages activado</strong> (Settings → Pages → Branch: main).<br/>
               El token necesita permisos de <strong>Contents: Read & Write</strong>.
             </div>
-            <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:"0 14px" }}>
+            <div style={{ display:"grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap:"0 14px" }}>
               <div><label style={lblSt}>Usuario u organización de GitHub</label><input style={fldSt} value={repoForm.owner} onChange={e => setRepoForm(f => ({...f, owner:e.target.value}))} placeholder="mi-usuario"/></div>
               <div><label style={lblSt}>Nombre del repositorio</label><input style={fldSt} value={repoForm.repo} onChange={e => setRepoForm(f => ({...f, repo:e.target.value}))} placeholder="catalogos-gaming"/></div>
             </div>
@@ -1001,13 +1007,13 @@ export default function CatalogAgent() {
       </div>
 
       {/* Input */}
-      <div style={{ padding:"10px 18px 14px", background:"#fff", borderTop:"1px solid #ece8ff", flexShrink:0 }}>
+      <div style={{ padding: isMobile ? "8px 12px 12px" : "10px 18px 14px", background:"#fff", borderTop:"1px solid #ece8ff", flexShrink:0 }}>
         <div style={{ display:"flex", gap:8 }}>
           <input
             value={input}
             onChange={e => setInput(e.target.value)}
             onKeyDown={e => e.key === "Enter" && !e.shiftKey && handleSend()}
-            placeholder='"Crear catálogo [Servicio]" · "Listar servicios" · "Modificar juegos" · "Ayuda"'
+            placeholder={isMobile ? '"Crear catálogo [Servicio]" · "Ayuda"' : '"Crear catálogo [Servicio]" · "Listar servicios" · "Modificar juegos" · "Ayuda"'}
             style={{ flex:1, padding:"10px 14px", border:"1.5px solid #ddd", borderRadius:10, fontSize:13, outline:"none", fontFamily:"inherit" }}
           />
           <button onClick={handleSend} disabled={loading} style={{ ...btnP, padding:"0 18px", fontSize:16, opacity:loading ? .5 : 1 }}>→</button>
