@@ -24,7 +24,7 @@ const COMMANDS = [
 ];
 
 // ─── STORAGE ──────────────────────────────────────────────────────────────────
-const GAS_URL = "https://script.google.com/macros/s/AKfycbxjplCKK1gokN5IrnOqtJ1qExElP0k6cWGMZB-NmVuHSTbEgk7dJf3t_RycfKL_u2f6bg/exec";
+const GAS_URL = "https://script.google.com/macros/s/AKfycbyjbjfIhbbbbJjjVYQfF_eWJXsXw__UHBw9mavucZnl67kMdWa9QQyH1szko-thmsHLUw/exec";
 
 async function stGet(k) { try { const r = await window.storage.get(k); return r ? JSON.parse(r.value) : null; } catch { return null; } }
 async function stSet(k, v) { try { await window.storage.set(k, JSON.stringify(v)); } catch {} }
@@ -43,13 +43,13 @@ async function stSetRemote(action, data) {
   try {
     await fetch(GAS_URL, {
       method: "POST",
-      body: JSON.stringify({ action, data })
+      // text/plain evita el preflight CORS que GAS no soporta con application/json
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify({ action, data }),
     });
   } catch (e) {
     console.error("Error guardando datos", e);
   }
-
-  
 }
 
 // ─── CSV / SHEET PARSER ───────────────────────────────────────────────────────
@@ -504,10 +504,11 @@ export default function CatalogAgent() {
     const remoteData = await stGetRemote();
     if (remoteData) {
       if (remoteData.services) setServices(remoteData.services);
-      if (remoteData.config.sheetUrl) setSheetUrl(remoteData.config.sheetUrl);
-      if (remoteData.config.repoOwner) setRepoOwner(remoteData.config.repoOwner);
-      if (remoteData.config.repoName) setRepoName(remoteData.config.repoName);
-      if (remoteData.config.repoToken) setRepoToken(remoteData.config.repoToken);
+      const cfg = remoteData.config || {};
+      if (cfg.sheetUrl)  setSheetUrl(cfg.sheetUrl);
+      if (cfg.repoOwner) setRepoOwner(cfg.repoOwner);
+      if (cfg.repoName)  setRepoName(cfg.repoName);
+      if (cfg.repoToken) setRepoToken(cfg.repoToken);
     }
     setServicesLoading(false);
   })();
