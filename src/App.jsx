@@ -24,16 +24,22 @@ const COMMANDS = [
 ];
 
 // ─── STORAGE ──────────────────────────────────────────────────────────────────
-const GAS_URL = "https://script.google.com/macros/s/AKfycbwBAoCF86hpGfIZjkSan2AVdf3ULHFPcUqDvX9tA8yXaoi1LOlZhpN_SnE3cgnIwNjJ4w/exec";
-async function stGet() {
+const GAS_URL = "TU_URL_DE_APPS_SCRIPT_AQUI";
+
+async function stGet(k) { try { const r = await window.storage.get(k); return r ? JSON.parse(r.value) : null; } catch { return null; } }
+async function stSet(k, v) { try { await window.storage.set(k, JSON.stringify(v)); } catch {} }
+
+async function stGetRemote() {
   try {
     const res = await fetch(`${GAS_URL}?action=getAll`);
     return await res.json();
   } catch (e) {
     console.error("Error cargando datos remotos", e);
     return null;
-  } }
-async function stSet(action, data) { 
+  }
+}
+
+async function stSetRemote(action, data) {
   try {
     await fetch(GAS_URL, {
       method: "POST",
@@ -41,7 +47,10 @@ async function stSet(action, data) {
     });
   } catch (e) {
     console.error("Error guardando datos", e);
-  } }
+  }
+
+  
+}
 
 // ─── CSV / SHEET PARSER ───────────────────────────────────────────────────────
 function parseCSVRow(line) {
@@ -199,9 +208,6 @@ function generateWebHTML(svc, games, lang) {
     if (x.includes("steam")) return "Steam";
     if (x.includes("epic")) return "Epic Games";
     if (x.includes("battle.net")) return "Battle.net";
-    if (x.includes("roblox")) return "Roblox";
-    if (x.includes("rockstar")) return "Rockstar";
-    if (x.includes("microsoft")) return "Microsoft";
     if (x.includes("incluido")) return "Incluido";
     return "Otro";
   }
@@ -495,7 +501,7 @@ export default function CatalogAgent() {
 
   useEffect(() => {
   (async () => {
-    const remoteData = await stGet();
+    const remoteData = await stGetRemote();
     if (remoteData) {
       if (remoteData.services) setServices(remoteData.services);
       if (remoteData.config.sheetUrl) setSheetUrl(remoteData.config.sheetUrl);
@@ -509,24 +515,7 @@ export default function CatalogAgent() {
 
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior:"smooth" }); }, [messages, showForm, lastDeployUrl]);
 
-  async function saveServices(s) { 
-  setServices(s); 
-  await stSet("saveServices", s); 
-}
-
-async function saveRepoConfig() {
-  const newConfig = { 
-    repoOwner: repoForm.owner, 
-    repoName: repoForm.repo, 
-    repoToken: repoForm.token,
-    sheetUrl: sheetUrl // Mantener el valor actual
-  };
-  setRepoOwner(repoForm.owner);
-  setRepoName(repoForm.repo);
-  setRepoToken(repoForm.token);
-  await stSet("saveConfig", newConfig);
-  setShowForm(null);
-}
+  async function saveServices(s) { setServices(s); await stSet("svcs9", s); }
   function findSvc(q) { const t = q.toLowerCase(); return Object.entries(services).find(([,s]) => s.alias.some(a => t.includes(a))) || null; }
 
   // ── SEND ────────────────────────────────────────────────────────────────────
@@ -622,24 +611,54 @@ async function saveRepoConfig() {
     if (!form.name.trim()) return;
     const key = editKey || form.name.toLowerCase().replace(/\s+/g, "_");
     const aliases = form.alias ? form.alias.split(",").map(a => a.trim().toLowerCase()).filter(Boolean) : [form.name.toLowerCase()];
-    await saveServices({ ...services, [key]:{ name:form.name, alias:aliases, lang:form.lang, brandColor:form.brandColor, bgColor:form.bgColor||"#0a0a0f", borderColor:form.borderColor||"#333355", textColor:form.textColor||"", secondaryColor:form.secondaryColor, logoImg:form.logoImg, coverImg:form.coverImg, backImg:form.backImg, link:form.link } });
+    
+    const updatedServices = { 
+      ...services, 
+      [key]: { 
+        ...form, 
+        alias: aliases, 
+        bgColor: form.bgColor || "#0a0a0f", 
+        borderColor: form.borderColor || "#333355" 
+      } 
+    };
+
+    setServices(updatedServices);
+    await stSet("svcs9", updatedServices); // Mantenemos local por backup
+    await stSetRemote("saveServices", updatedServices); // <--- ENVÍO A SHEETS
+    
     setShowForm(null);
     setMessages(m => [...m, { role:"agent", type:"saved", data:form.name }]);
   }
 
   async function saveSheetConfig() {
     const url = sheetForm.trim();
-    setSheetUrl(url); await stSet("sheetUrl", url);
+    setSheetUrl(url);
+    await stSet("sheetUrl", url);
+    
+    // Actualizamos la config global en Sheets
+    await stSetRemote("saveConfig", { 
+      sheetUrl: url, repoOwner, repoName, repoToken 
+    });
+    
     setShowForm(null);
     setMessages(m => [...m, { role:"agent", type:"sheet_saved", data:url }]);
   }
 
   async function saveRepoConfig() {
-    setRepoOwner(repoForm.owner); await stSet("repoOwner", repoForm.owner);
-    setRepoName(repoForm.repo);   await stSet("repoName",  repoForm.repo);
-    setRepoToken(repoForm.token); await stSet("repoToken", repoForm.token);
+    const { owner, repo, token } = repoForm;
+    setRepoOwner(owner); setRepoName(repo); setRepoToken(token);
+    
+    await stSet("repoOwner", owner);
+    await stSet("repoName", repo);
+    await stSet("repoToken", token);
+    
+    // Actualizamos la config global en Sheets
+    await stSetRemote("saveConfig", { 
+      sheetUrl, repoOwner: owner, repoName: repo, repoToken: token 
+    });
+    
     setShowForm(null);
-    setMessages(m => [...m, { role:"agent", type:"repo_saved", data:`${repoForm.owner}/${repoForm.repo}` }]);
+    setMessages(m => [...m, { role:"agent", type:"repo_saved", data:`${owner}/${repo}` }]);
   }
 
   function handleImgUpload(field, e) {
