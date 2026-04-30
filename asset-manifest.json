@@ -1,15 +1,15 @@
 {
   "files": {
     "main.css": "/AWG-Catalog-Creator/static/css/main.e6c13ad2.css",
-    "main.js": "/AWG-Catalog-Creator/static/js/main.fd617aee.js",
+    "main.js": "/AWG-Catalog-Creator/static/js/main.3382fa24.js",
     "static/js/453.4bed5f4e.chunk.js": "/AWG-Catalog-Creator/static/js/453.4bed5f4e.chunk.js",
     "index.html": "/AWG-Catalog-Creator/index.html",
     "main.e6c13ad2.css.map": "/AWG-Catalog-Creator/static/css/main.e6c13ad2.css.map",
-    "main.fd617aee.js.map": "/AWG-Catalog-Creator/static/js/main.fd617aee.js.map",
+    "main.3382fa24.js.map": "/AWG-Catalog-Creator/static/js/main.3382fa24.js.map",
     "453.4bed5f4e.chunk.js.map": "/AWG-Catalog-Creator/static/js/453.4bed5f4e.chunk.js.map"
   },
   "entrypoints": [
     "static/css/main.e6c13ad2.css",
-    "static/js/main.fd617aee.js"
+    "static/js/main.3382fa24.js"
   ]
 }
