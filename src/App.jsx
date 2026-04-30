@@ -19,6 +19,7 @@ const COMMANDS = [
   ["Editar servicio [Nombre]",           "Editar un servicio existente"],
   ["Eliminar servicio [Nombre]",         "Eliminar un servicio del sistema"],
   ["Configurar planilla",                "Configurar la URL del Google Sheet con los juegos"],
+  ["Modificar juegos",                   "Abrir la planilla de Google Sheets para editar los juegos"],
   ["Configurar repositorio",             "Configurar el repositorio de GitHub para el deploy"],
   ["Ayuda",                              "Mostrar este menú"],
 ];
@@ -126,6 +127,7 @@ function parseCmd(txt) {
   if (/^(listar servicios|listar|list)/.test(t))                                      return { type: "list" };
   if (/^(nuevo servicio|agregar servicio|add new service|add service)/.test(t))       return { type: "add" };
   if (/^(configurar planilla|config sheet|configurar sheet)/.test(t))                 return { type: "config_sheet" };
+  if (/^(modificar juegos|editar juegos)/.test(t))                                    return { type: "modify_games" };
   if (/^(configurar repositorio|configurar repo|config repo|config github)/.test(t))  return { type: "config_repo" };
   const em = t.match(/^(editar servicio|edit service)\s+(.+)/);
   if (em) return { type: "edit", svc: em[2].trim() };
@@ -509,7 +511,7 @@ export default function CatalogAgent() {
   const [gasConnected, setGasConnected] = useState(null);
 
   const bottomRef = useRef(null);
-  const C = "#7c3aed";
+  const C = "#1200b7";
 
   useEffect(() => {
   (async () => {
@@ -551,6 +553,14 @@ export default function CatalogAgent() {
       setForm({ name:"", alias:"", lang:"ES", brandColor:"#7c3aed", bgColor:"#0a0a0f", borderColor:"#333355", textColor:"", secondaryColor:"#ffffff", logoImg:"", coverImg:"", backImg:"", link:"" });
       setEditKey(null); setShowForm("service");
       setMessages(m => [...m, { role:"agent", type:"form_open" }]);
+    } else if (cmd.type === "modify_games") {
+      if (!sheetUrl) {
+        setMessages(m => [...m, { role:"agent", type:"no_sheet" }]);
+      } else {
+        const sheetId = sheetUrl.match(/\/d\/([\w-]+)/)?.[1];
+        const editUrl = sheetId ? `https://docs.google.com/spreadsheets/d/${sheetId}/edit` : sheetUrl;
+        setMessages(m => [...m, { role:"agent", type:"sheet_link", data:editUrl }]);
+      }
     } else if (cmd.type === "config_sheet") {
       setSheetForm(sheetUrl);
       setShowForm("sheet");
@@ -718,18 +728,12 @@ export default function CatalogAgent() {
 
     if (type === "help") return (
       <AgBubble key={i}>
-        <div style={{ fontWeight:700, fontSize:14, marginBottom:10 }}>Agente de Catálogos Cloud Gaming v5</div>
+        <div style={{ fontWeight:700, fontSize:14, marginBottom:10 }}>AWG Catalog Maker</div>
         {COMMANDS.map(([cmd, desc]) => (
           <div key={cmd} style={{ display:"flex", gap:8, alignItems:"flex-start", marginBottom:6, flexWrap:"wrap" }}>
             {pill(cmd)}<span style={{ color:"#555", fontSize:12, paddingTop:2 }}>{desc}</span>
           </div>
         ))}
-        <div style={{ marginTop:12, fontSize:11, background:"#f0ebff", padding:"8px 10px", borderRadius:6, color:C }}>
-          <strong>v5:</strong> Deploy automático a GitHub Pages · Google Sheets en vivo · Web pública por servicio
-        </div>
-        <div style={{ marginTop:8, fontSize:11, color:"#888" }}>
-          Configurá {pill("Configurar planilla")} y {pill("Configurar repositorio")} antes de crear el primer catálogo.
-        </div>
       </AgBubble>
     );
 
@@ -755,6 +759,13 @@ export default function CatalogAgent() {
     if (type === "saved_local") return <AgBubble key={i}><span style={{color:"#c00"}}>⚠️ Servicio <strong>{data}</strong> guardado solo localmente — no se pudo conectar con Google Sheets. Revisá la consola (F12) para ver el error.</span></AgBubble>;
     if (type === "deleted")    return <AgBubble key={i}>Servicio <strong>{data}</strong> eliminado.</AgBubble>;
 
+    if (type === "sheet_link") return (
+      <AgBubble key={i}>
+        <div style={{ fontWeight:700, marginBottom:6 }}>Planilla de juegos</div>
+        <div style={{ fontSize:12, color:"#555", marginBottom:8 }}>Abrí este link para editar los juegos directamente en Google Sheets:</div>
+        <a href={data} target="_blank" rel="noopener noreferrer" style={{ color:C, fontSize:12, wordBreak:"break-all" }}>{data}</a>
+      </AgBubble>
+    );
     if (type === "sheet_saved") return (
       <AgBubble key={i}>
         <div>✅ Planilla configurada y guardada en Google Sheets.</div>
@@ -836,8 +847,8 @@ export default function CatalogAgent() {
       <div style={{ background:C, color:"#fff", padding:"11px 18px", display:"flex", alignItems:"center", gap:12, flexShrink:0 }}>
         <div style={{ width:34, height:34, borderRadius:8, background:"rgba(255,255,255,.2)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:17, flexShrink:0 }}>🎮</div>
         <div>
-          <div style={{ fontWeight:700, fontSize:15 }}>Agente de Catálogos v5</div>
-          <div style={{ fontSize:11, opacity:.7 }}>Cloud Gaming · GitHub Deploy</div>
+          <div style={{ fontWeight:700, fontSize:15 }}>AWG Catalog Maker</div>
+          <div style={{ fontSize:11, opacity:.7 }}>Cloud gaming catalog creator service</div>
         </div>
         {/* Status pills */}
         <div style={{ marginLeft:"auto", display:"flex", gap:6, flexWrap:"wrap", justifyContent:"flex-end" }}>
