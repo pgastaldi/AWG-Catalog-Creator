@@ -754,7 +754,7 @@ export default function CatalogAgent() {
   const [pdfHTML, setPdfHTML]         = useState(null);
 
   const bottomRef = useRef(null);
-  const C = "#7c3aed";
+  const C = "#1800ef";
 
   useEffect(() => {
     (async () => {
@@ -1238,7 +1238,7 @@ export default function CatalogAgent() {
             value={input}
             onChange={e => setInput(e.target.value)}
             onKeyDown={e => e.key === "Enter" && !e.shiftKey && handleSend()}
-            placeholder={isMobile ? '"Crear catálogo [Servicio]" · "Ayuda"' : '"Crear catálogo Xbox ES" · "Actualizar catálogo Xbox ES" · "Ayuda"'}
+            placeholder={'"Crear catálogo [Servicio]" · "Actualizar catálogo [Servicio] " · "Ayuda"'}
             style={{ flex:1, padding:"10px 14px", border:"1.5px solid #ddd", borderRadius:10, fontSize:13, outline:"none", fontFamily:"inherit" }}
           />
           <button onClick={handleSend} disabled={loading} style={{ ...btnP, padding:"0 18px", fontSize:16, opacity:loading ? .5 : 1 }}>→</button>
