@@ -7,9 +7,9 @@ const MONTHS = {
   PT: ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"],
 };
 const LABELS = {
-  ES: { catalog:"CATÁLOGO DE VIDEOJUEGOS", featured:"Destacados", top:"Más Jugados", all:"Juegos", nuevos:"Novedades", single:"1 Jugador", multi:"Multi", online:"Online", note:"Juegos sujetos a cambios sin previo aviso", play:"Jugar ahora", search:"Buscar juego, publisher, género...", genre:"Género", license:"LICENCIA", device:"DISPOSITIVO", control:"CONTROL", players:"JUGADORES", singlePlayer:"Un jugador", multiplayer:"Multijugador", clearFilters:"Borrar filtros", noResults:"Sin resultados", noResultsSub:"Probá otro término o eliminá algunos filtros", newBadge:"NUEVO", freeBadge:"Gratis", jugadores:"Jugadores", dispositivos:"Dispositivos", controles:"Controles", keyboard:"Teclado", results:"Resultados", games:"juegos", pegi:"PEGI", free:"Gratuito", mobile:"Móvil" },
-  EN: { catalog:"VIDEO GAME CATALOG", featured:"Featured", top:"Most Played", all:"All Games", nuevos:"New", single:"Single", multi:"Multi", online:"Online", note:"Games subject to change without notice", play:"Play now", search:"Search game, publisher, genre...", genre:"Genre", license:"LICENSE", device:"DEVICE", control:"CONTROL", players:"PLAYERS", singlePlayer:"Single player", multiplayer:"Multiplayer", clearFilters:"Clear filters", noResults:"No results", noResultsSub:"Try another term or remove some filters", newBadge:"NEW", freeBadge:"Free", jugadores:"Players", dispositivos:"Devices", controles:"Controls", keyboard:"Keyboard", results:"Results", games:"games", pegi:"PEGI", free:"Free", mobile:"Mobile" },
-  PT: { catalog:"CATÁLOGO DE JOGOS", featured:"Destaques", top:"Mais Jogados", all:"Jogos", nuevos:"Novidades", single:"1 Jogador", multi:"Multi", online:"Online", note:"Jogos sujeitos a alterações sem aviso prévio", play:"Jogar agora", search:"Buscar jogo, publisher, gênero...", genre:"Gênero", license:"LICENÇA", device:"DISPOSITIVO", control:"CONTROLE", players:"JOGADORES", singlePlayer:"Um jogador", multiplayer:"Multijogador", clearFilters:"Limpar filtros", noResults:"Sem resultados", noResultsSub:"Tente outro termo ou remova alguns filtros", newBadge:"NOVO", freeBadge:"Grátis", jugadores:"Jogadores", dispositivos:"Dispositivos", controles:"Controles", keyboard:"Teclado", results:"Resultados", games:"jogos", pegi:"PEGI", free:"Gratuito", mobile:"Móvel" },
+  ES: { catalog:"CATÁLOGO DE VIDEOJUEGOS", featured:"Destacados", top:"Más Jugados", all:"Juegos", nuevos:"Novedades", single:"1 Jugador", multi:"Multi", online:"Online", note:"Juegos sujetos a cambios sin previo aviso", play:"Jugar ahora", search:"Buscar juego, publisher, género...", genre:"Género", license:"LICENCIA", device:"DISPOSITIVO", control:"CONTROL", players:"JUGADORES", singlePlayer:"Un jugador", multiplayer:"Multijugador", clearFilters:"Borrar filtros", noResults:"Sin resultados", noResultsSub:"Probá otro término o eliminá algunos filtros", newBadge:"NUEVO", freeBadge:"Gratis", jugadores:"Jugadores", dispositivos:"Dispositivos", controles:"Controles", keyboard:"Teclado", results:"Resultados", games:"juegos", pegi:"PEGI", free:"Gratuito", mobile:"Móvil", maintenance:"EN MANTENIMIENTO" },
+  EN: { catalog:"VIDEO GAME CATALOG", featured:"Featured", top:"Most Played", all:"All Games", nuevos:"New", single:"Single", multi:"Multi", online:"Online", note:"Games subject to change without notice", play:"Play now", search:"Search game, publisher, genre...", genre:"Genre", license:"LICENSE", device:"DEVICE", control:"CONTROL", players:"PLAYERS", singlePlayer:"Single player", multiplayer:"Multiplayer", clearFilters:"Clear filters", noResults:"No results", noResultsSub:"Try another term or remove some filters", newBadge:"NEW", freeBadge:"Free", jugadores:"Players", dispositivos:"Devices", controles:"Controls", keyboard:"Keyboard", results:"Results", games:"games", pegi:"PEGI", free:"Free", mobile:"Mobile", maintenance:"UNDER MAINTENANCE" },
+  PT: { catalog:"CATÁLOGO DE JOGOS", featured:"Destaques", top:"Mais Jogados", all:"Jogos", nuevos:"Novidades", single:"1 Jogador", multi:"Multi", online:"Online", note:"Jogos sujeitos a alterações sem aviso prévio", play:"Jogar agora", search:"Buscar jogo, publisher, gênero...", genre:"Gênero", license:"LICENÇA", device:"DISPOSITIVO", control:"CONTROLE", players:"JOGADORES", singlePlayer:"Um jogador", multiplayer:"Multijogador", clearFilters:"Limpar filtros", noResults:"Sem resultados", noResultsSub:"Tente outro termo ou remova alguns filtros", newBadge:"NOVO", freeBadge:"Grátis", jugadores:"Jogadores", dispositivos:"Dispositivos", controles:"Controles", keyboard:"Teclado", results:"Resultados", games:"jogos", pegi:"PEGI", free:"Gratuito", mobile:"Móvel", maintenance:"EM MANUTENÇÃO" },
 };
 
 const COMMANDS = [
@@ -82,6 +82,7 @@ function mapRow(o) {
     pc: dev.includes("pc"), mobile: dev.includes("mobile"), tv: dev.includes("tv"),
     gamepad: ctrl.includes("gamepad"), teclado: ctrl.includes("teclado"), touchscreen: ctrl.includes("touchscreen"),
     nuevo: est === "nuevo", destacado: est === "destacado", masJugado: est.includes("mas jugado"),
+    mantenimiento: est.includes("mantenimiento"),
   };
 }
 
@@ -344,8 +345,16 @@ function generatePDFHTML(svc, games, lang) {
       const desc = g.descripcion; //&& g.descripcion.length > 160
         //? g.descripcion.slice(0, 160).trimEnd() + "…"
         //: (g.descripcion || "");
+      const maintBanner = g.mantenimiento ? `
+        <!-- tarjeta de mantenimiento por encima de la card -->
+        <div style="position:absolute;inset:0;z-index:5;background:rgba(10,10,10,.78);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;border-radius:6px">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18v3h3l6.3-6.3a4 4 0 0 0 5.4-5.4l-2.6 2.6-2-2 2.6-2.6Z"/></svg>
+          <div style="font-family:'Barlow Condensed',Arial;font-size:18px;font-weight:900;color:#fff;letter-spacing:1.5px;text-transform:uppercase;text-align:center;padding:0 10px">${L.maintenance}</div>
+          <div style="width:40px;height:3px;background:${color}"></div>
+        </div>` : "";
       return `
-      <div style="background:#f2f2f2;border-radius:6px;overflow:hidden;display:flex;align-items:stretch">
+      <div style="position:relative;background:#f2f2f2;border-radius:6px;overflow:hidden;display:flex;align-items:stretch">
+        ${maintBanner}
         <!-- imagen izquierda — altura completa de la card -->
         <div style="flex-shrink:0;position:relative;overflow:hidden;background:#ddd;display:flex;align-items:stretch">
           ${g.portada
