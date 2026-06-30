@@ -111,7 +111,7 @@ function gameInService(game, svc) {
 // ─── DEFAULT SERVICES ─────────────────────────────────────────────────────────
 const DEFAULT_SERVICES = {
   xbox:    { name:"Xbox Cloud Gaming", alias:["xbox","xcloud","xbox cloud"],  lang:"ES", brandColor:"#107C10", bgColor:"#0a0f0a", secondaryColor:"#ffffff", logoImg:"", coverImg:"", backImg:"", link:"https://www.xbox.com/play" },
-  geforce: { name:"GeForce Now",       alias:["geforce","geforce now","nvidia"], lang:"ES", brandColor:"#76B900", bgColor:"#0a0a0f", secondaryColor:"#000000", logoImg:"", coverImg:"", backImg:"", link:"https://www.nvidia.com/geforce-now" },
+  
 };
 
 // ─── COMMAND PARSER ───────────────────────────────────────────────────────────
