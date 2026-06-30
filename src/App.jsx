@@ -195,9 +195,10 @@ async function translateGames(games, targetLang) {
   if (!games || !games.length) return games;
   const tl = TR_LANG[targetLang] || targetLang.toLowerCase();
   // Campos que se traducen y se sobreescriben in-place.
-  // OJO: "genero" NO se sobreescribe — se mantiene el original en español para
+  // OJO: el TÍTULO del juego NO se traduce (es nombre propio); se mantiene tal cual.
+  // El "genero" tampoco se sobreescribe — se mantiene el original en español para
   // que el PDF agrupe/ordene por género canónico; la traducción va a "generoTr".
-  const fields = ["titulo", "descripcion", "licencia"];
+  const fields = ["descripcion", "licencia"];
   // strings únicos, en una sola línea (sin saltos internos que rompan el batch)
   const clean = s => (s || "").replace(/\s*\n\s*/g, " ").trim();
   const unique = [...new Set(
