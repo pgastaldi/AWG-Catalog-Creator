@@ -12,6 +12,14 @@ const LABELS = {
   PT: { catalog:"CATÁLOGO DE JOGOS", featured:"Destaques", top:"Mais Jogados", all:"Jogos", nuevos:"Novidades", single:"1 Jogador", multi:"Multi", online:"Online", note:"Jogos sujeitos a alterações sem aviso prévio", play:"Jogar agora", search:"Buscar jogo, publisher, gênero...", genre:"Gênero", license:"LICENÇA", device:"DISPOSITIVO", control:"CONTROLE", players:"JOGADORES", singlePlayer:"Um jogador", multiplayer:"Multijogador", clearFilters:"Limpar filtros", noResults:"Sem resultados", noResultsSub:"Tente outro termo ou remova alguns filtros", newBadge:"NOVO", freeBadge:"Grátis", jugadores:"Jogadores", dispositivos:"Dispositivos", controles:"Controles", keyboard:"Teclado", results:"Resultados", games:"jogos", pegi:"PEGI", free:"Gratuito", mobile:"Móvel", maintenance:"EM MANUTENÇÃO" },
 };
 
+// Etiquetas de género por idioma (clave = género canónico en español).
+// Sirve para MOSTRAR el género traducido; el orden de las categorías es
+// alfabético por la etiqueta mostrada.
+const GENRE_I18N = {
+  EN: { "Acción":"Action","Aventura":"Adventure","Carreras":"Racing","Casual":"Casual","Deportes":"Sports","Lucha":"Fighting","Platforma":"Platformer","Puzzle":"Puzzle","RPG":"RPG","Simulador":"Simulation","Otros":"Other" },
+  PT: { "Acción":"Ação","Aventura":"Aventura","Carreras":"Corridas","Casual":"Casual","Deportes":"Esportes","Lucha":"Luta","Platforma":"Plataforma","Puzzle":"Quebra-cabeça","RPG":"RPG","Simulador":"Simulador","Otros":"Outros" },
+};
+
 const COMMANDS = [
   ["Crear catálogo [Servicio] [Idioma]",     "Genera el catálogo en PDF descargable — ES / EN / PT"],
   ["Actualizar catálogo [Servicio] [Idioma]","Genera la web y la sube al repositorio GitHub"],
@@ -83,7 +91,21 @@ function mapRow(o) {
     gamepad: ctrl.includes("gamepad"), teclado: ctrl.includes("teclado"), touchscreen: ctrl.includes("touchscreen"),
     nuevo: est === "nuevo", destacado: est === "destacado", masJugado: est.includes("mas jugado"),
     mantenimiento: est.includes("mantenimiento"),
+    servicio: o.servicio || "",
   };
+}
+
+// ── Filtro por servicio ───────────────────────────────────────────────────────
+// Devuelve true si el juego pertenece al servicio dado (según la columna "servicio"
+// del sheet). Un juego puede listar varios servicios separados por , ; o /.
+// Si la columna está vacía, el juego se muestra en todos los servicios.
+function norm(s) { return (s || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").trim(); }
+function gameInService(game, svc) {
+  const raw = norm(game.servicio);
+  if (!raw) return true; // sin servicio asignado → visible en todos
+  const tokens = raw.split(/[,;/]+/).map(t => t.trim()).filter(Boolean);
+  const aliases = [norm(svc.name), ...(svc.alias || []).map(norm)].filter(Boolean);
+  return tokens.some(tok => aliases.some(a => tok.includes(a) || a.includes(tok)));
 }
 
 // ─── DEFAULT SERVICES ─────────────────────────────────────────────────────────
@@ -107,10 +129,10 @@ function parseCmd(txt) {
   if (dm) return { type: "delete", svc: dm[2].trim() };
   // Actualizar catálogo → web a GitHub
   const um = txt.trim().match(/^(actualizar cat[aá]logo|update catalog)\s+(.+?)(?:\s+(ES|EN|PT))?$/i);
-  if (um) return { type: "update", svc: um[2].trim(), lang: (um[3] || "ES").toUpperCase() };
+  if (um) return { type: "update", svc: um[2].trim(), lang: um[3] ? um[3].toUpperCase() : null };
   // Crear catálogo → PDF descargable
   const cm = txt.trim().match(/^(crear cat[aá]logo|create catalog)\s+(.+?)(?:\s+(ES|EN|PT))?$/i);
-  if (cm) return { type: "create", svc: cm[2].trim(), lang: (cm[3] || "ES").toUpperCase() };
+  if (cm) return { type: "create", svc: cm[2].trim(), lang: cm[3] ? cm[3].toUpperCase() : null };
   return { type: "unknown" };
 }
 
@@ -124,6 +146,88 @@ async function fetchSheetGames(url) {
     const text = await res.text();
     return parseCSV(text).map(mapRow).filter(g => g.titulo);
   } catch { return null; }
+}
+
+// ─── TRADUCCIÓN AUTOMÁTICA (Google Translate, endpoint público sin key) ───────
+const _trCache = {};
+const TR_LANG = { ES:"es", EN:"en", PT:"pt" };
+// fetch con timeout para que una request colgada nunca frene toda la exportación
+async function fetchTimeout(url, ms = 12000) {
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), ms);
+  try { return await fetch(url, { signal: ctrl.signal }); }
+  finally { clearTimeout(t); }
+}
+function trUrl(q, tl) {
+  return `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=${tl}&dt=t&q=${encodeURIComponent(q)}`;
+}
+// Traduce un solo texto (con cache). Si falla, devuelve el original — nunca tira error.
+async function translateText(text, targetLang) {
+  const t = (text || "").trim();
+  if (!t) return text;
+  const tl = TR_LANG[targetLang] || targetLang.toLowerCase();
+  const key = tl + "|" + t;
+  if (_trCache[key] !== undefined) return _trCache[key];
+  try {
+    const res = await fetchTimeout(trUrl(t, tl));
+    if (!res.ok) { _trCache[key] = t; return t; }
+    const data = await res.json();
+    const out = (data[0] || []).map(seg => seg[0]).join("") || t;
+    _trCache[key] = out;
+    return out;
+  } catch { _trCache[key] = t; return t; }
+}
+// Traduce un lote de textos en UNA sola request, uniéndolos por saltos de línea.
+// Devuelve null si la respuesta no se alinea 1:1 (para que el caller use fallback).
+async function translateBatch(texts, tl) {
+  const joined = texts.join("\n");
+  const res = await fetchTimeout(trUrl(joined, tl));
+  if (!res.ok) return null;
+  const data = await res.json();
+  const out = (data[0] || []).map(seg => seg[0]).join("");
+  const parts = out.split("\n");
+  return parts.length === texts.length ? parts : null;
+}
+// Traduce los textos del sheet de cada juego al idioma destino.
+// Deduplica strings repetidos y traduce en lotes (pocas requests → sin rate-limit).
+// CLAVE: nunca descarta juegos — si una traducción falla, deja el texto original.
+async function translateGames(games, targetLang) {
+  if (!games || !games.length) return games;
+  const tl = TR_LANG[targetLang] || targetLang.toLowerCase();
+  // Campos que se traducen y se sobreescriben in-place.
+  // OJO: "genero" NO se sobreescribe — se mantiene el original en español para
+  // que el PDF agrupe/ordene por género canónico; la traducción va a "generoTr".
+  const fields = ["titulo", "descripcion", "licencia"];
+  // strings únicos, en una sola línea (sin saltos internos que rompan el batch)
+  const clean = s => (s || "").replace(/\s*\n\s*/g, " ").trim();
+  const unique = [...new Set(
+    games.flatMap(g => [...fields.map(f => clean(g[f])), clean(g.genero)]).filter(Boolean)
+  )];
+  const map = {};
+  const BATCH = 20; // textos por request
+  for (let i = 0; i < unique.length; i += BATCH) {
+    const batch = unique.slice(i, i + BATCH);
+    let parts = null;
+    try { parts = await translateBatch(batch, tl); } catch { parts = null; }
+    if (parts) {
+      batch.forEach((s, j) => { map[s] = parts[j] || s; });
+    } else {
+      // fallback seguro: uno por uno (cada uno cae al original si falla)
+      const one = await Promise.all(batch.map(s => translateText(s, targetLang)));
+      batch.forEach((s, j) => { map[s] = one[j]; });
+    }
+  }
+  return games.map(g => {
+    const out = { ...g };
+    fields.forEach(f => {
+      const k = clean(g[f]);
+      if (k && map[k]) out[f] = map[k];
+    });
+    // género traducido aparte (para la web); el original queda intacto
+    const gk = clean(g.genero);
+    out.generoTr = (gk && map[gk]) || g.genero;
+    return out;
+  });
 }
 
 // ─── GITHUB API ───────────────────────────────────────────────────────────────
@@ -175,8 +279,7 @@ function generatePDFHTML(svc, games, lang) {
   const masJugados = games.filter(g => g.masJugado);
   const resto      = games.filter(g => !g.nuevo && !g.destacado && !g.masJugado);
 
-  // ── Géneros principales
-  const MAIN_GENRES = ["Acción","Aventura","Carreras","Casual","Deportes","Lucha","Platforma","Puzzle","RPG","Simulador"];
+  // ── Aliases de género (normalizan variantes/idiomas al canónico en español)
   const GENRE_ALIASES = {
     "accion":"Acción","acción":"Acción","action":"Acción",
     "aventura":"Aventura","adventure":"Aventura",
@@ -194,16 +297,22 @@ function generatePDFHTML(svc, games, lang) {
     const key = first.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"");
     return GENRE_ALIASES[key] || first;
   }
+  // Etiqueta a mostrar: traduce el g\u00e9nero can\u00f3nico al idioma del cat\u00e1logo,
+  // sin afectar la agrupaci\u00f3n/orden (que sigue siendo por can\u00f3nico en espa\u00f1ol).
+  const genreLabel = raw => {
+    const canon = resolveGenre(raw || "");
+    return (GENRE_I18N[lang] && GENRE_I18N[lang][canon]) || canon;
+  };
   const byGenre = {};
   resto.forEach(g => {
     const gen = resolveGenre(g.genero || "Otros");
     if (!byGenre[gen]) byGenre[gen] = [];
     byGenre[gen].push(g);
   });
-  const sortedGenres = [
-    ...MAIN_GENRES.filter(g => byGenre[g]),
-    ...Object.keys(byGenre).filter(g => !MAIN_GENRES.includes(g)).sort(),
-  ];
+  // Orden alfabético por la categoría tal como se muestra (según el idioma)
+  const sortedGenres = Object.keys(byGenre).sort((a, b) =>
+    genreLabel(a).localeCompare(genreLabel(b), undefined, { sensitivity: "base" })
+  );
 
   // ── SVG íconos en color del servicio ──────────────────────────────────────
   function ico(path, size=28) {
@@ -268,7 +377,7 @@ function generatePDFHTML(svc, games, lang) {
     const infoCol = `
       <div style="flex:1;padding:32px 44px;display:flex;flex-direction:column;background:#f2f2f2;overflow:hidden">
         <div style="font-size:12px;color:#888;font-weight:600;letter-spacing:1px;text-transform:uppercase;margin-bottom:3px">${g.publisher}</div>
-        <div style="font-size:11px;color:#666;font-weight:600;letter-spacing:.5px;text-transform:uppercase;margin-bottom:20px">GÉNERO: ${resolveGenre(g.genero)}</div>
+        <div style="font-size:11px;color:#666;font-weight:600;letter-spacing:.5px;text-transform:uppercase;margin-bottom:20px">${L.genre.toUpperCase()}: ${genreLabel(g.genero)}</div>
         ${devices}
         <div style="flex:1;font-size:17px;color:#222;line-height:1.75;margin-top:24px;overflow:hidden">${g.descripcion || ""}</div>
         <div style="font-size:12px;font-weight:700;color:#444;letter-spacing:.5px;text-transform:uppercase;margin-top:16px;padding-top:12px;border-top:1px solid #ddd;flex-shrink:0">${g.licencia}</div>
@@ -398,8 +507,8 @@ function generatePDFHTML(svc, games, lang) {
     <div class="slide" style="display:flex;flex-direction:column;background:${bg}">
       <div style="background:${secondary};padding:14px 36px;display:flex;align-items:center;gap:16px;flex-shrink:0">
         ${svc.logoImg ? `<img src="${svc.logoImg}" style="height:28px;object-fit:contain"/>` : ""}
-        <div style="font-family:'Barlow Condensed',Arial;font-size:28px;font-weight:900;color:#fff;letter-spacing:1px;text-transform:uppercase">${genre}</div>
-        <div style="font-size:13px;color:#888;margin-left:8px">${isFirst ? `${gs.length} juegos` : ""}</div>
+        <div style="font-family:'Barlow Condensed',Arial;font-size:28px;font-weight:900;color:#fff;letter-spacing:1px;text-transform:uppercase">${genreLabel(genre)}</div>
+        <div style="font-size:13px;color:#888;margin-left:8px">${isFirst ? `${gs.length} ${L.games}` : ""}</div>
       </div>
       <div style="width:100px;height:4px;background:${color};margin-left:36px;flex-shrink:0"></div>
       <div style="flex:1;display:grid;grid-template-columns:1fr 1fr 1fr;grid-template-rows:1fr 1fr;gap:12px;padding:16px 36px;overflow:hidden">
@@ -537,7 +646,7 @@ function generateWebHTML(svc, games, lang) {
   }
 
   const gamesJSON = JSON.stringify(games.map(g => ({
-    t: g.titulo, p: g.publisher, g: g.genero, pe: g.pegi,
+    t: g.titulo, p: g.publisher, g: g.generoTr || g.genero, pe: g.pegi,
     l: g.licencia, lt: plt(g.licencia), free: g.licencia.toLowerCase().includes("gratuito"),
     i: g.portada, d: g.descripcion,
     sp: g.singleplayer, mp: g.multiplayer, mo: g.multiOnline,
@@ -839,17 +948,25 @@ export default function CatalogAgent() {
       if (!e) { setMessages(m => [...m, { role:"agent", type:"not_found", data:cmd.svc }]); }
       else if (!sheetUrl) { setMessages(m => [...m, { role:"agent", type:"no_sheet" }]); }
       else {
+        const lang = cmd.lang || e[1].lang || "ES";
         setPdfHTML(null);
         setMessages(m => [...m, { role:"agent", type:"generating_pdf", data:e[1].name }]);
         setMessages(m => [...m, { role:"agent", type:"step", data:"Leyendo datos del Google Sheet..." }]);
-        const games = await fetchSheetGames(sheetUrl);
+        let games = await fetchSheetGames(sheetUrl);
+        const totalRead = games ? games.length : 0;
+        if (games) games = games.filter(g => gameInService(g, e[1]));
         if (!games || games.length === 0) {
-          setMessages(m => [...m, { role:"agent", type:"error", data:"No se pudieron leer los juegos del Sheet." }]);
+          setMessages(m => [...m, { role:"agent", type:"error", data:`No hay juegos asignados a ${e[1].name} en el Sheet (columna "servicio"). Leídos: ${totalRead}.` }]);
         } else {
+          setMessages(m => [...m, { role:"agent", type:"step", data:`Leídos del Sheet: ${totalRead} · asignados a ${e[1].name}: ${games.length}` }]);
+          if (lang === "PT") {
+            setMessages(m => [...m, { role:"agent", type:"step", data:"Traduciendo textos del sheet al portugués..." }]);
+            games = await translateGames(games, "PT");
+          }
           setMessages(m => [...m, { role:"agent", type:"step", data:`Generando PDF para ${e[1].name} — ${games.length} juegos...` }]);
-          const html = generatePDFHTML(e[1], games, cmd.lang);
-          setPdfHTML({ html, name: e[1].name, lang: cmd.lang, n: games.length });
-          setMessages(m => [...m, { role:"agent", type:"pdf_ready", data:{ svc:e[1].name, lang:cmd.lang, n:games.length } }]);
+          const html = generatePDFHTML(e[1], games, lang);
+          setPdfHTML({ html, name: e[1].name, lang, n: games.length });
+          setMessages(m => [...m, { role:"agent", type:"pdf_ready", data:{ svc:e[1].name, lang, n:games.length } }]);
         }
       }
 
@@ -862,7 +979,7 @@ export default function CatalogAgent() {
       else {
         setLastDeployUrl(null);
         setMessages(m => [...m, { role:"agent", type:"generating", data:e[1].name }]);
-        await doDeploy(e[1], cmd.lang);
+        await doDeploy(e[1], cmd.lang || e[1].lang || "ES");
       }
     } else {
       setMessages(m => [...m, { role:"agent", type:"unknown" }]);
@@ -874,10 +991,15 @@ export default function CatalogAgent() {
   async function doDeploy(svc, lang) {
     try {
       setMessages(m => [...m, { role:"agent", type:"step", data:"Leyendo datos del Google Sheet..." }]);
-      const games = await fetchSheetGames(sheetUrl);
+      let games = await fetchSheetGames(sheetUrl);
+      if (games) games = games.filter(g => gameInService(g, svc));
       if (!games || games.length === 0) {
-        setMessages(m => [...m, { role:"agent", type:"error", data:"No se pudieron leer los juegos del Sheet. Verificá que la URL sea correcta y el Sheet sea público." }]);
+        setMessages(m => [...m, { role:"agent", type:"error", data:`No hay juegos asignados a ${svc.name} en el Sheet (columna "servicio"). Verificá la URL y que el Sheet sea público.` }]);
         return;
+      }
+      if (lang === "PT") {
+        setMessages(m => [...m, { role:"agent", type:"step", data:"Traduciendo textos del sheet al portugués..." }]);
+        games = await translateGames(games, "PT");
       }
       setMessages(m => [...m, { role:"agent", type:"step", data:`Generando web para ${svc.name} — ${games.length} juegos...` }]);
       const html = generateWebHTML(svc, games, lang);
