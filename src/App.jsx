@@ -477,16 +477,16 @@ function generatePDFHTML(svc, games, lang) {
         <div style="flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0">
           <!-- título en header oscuro -->
           <div style="background:${secondary};padding:10px 14px 9px">
-            <div style="font-family:'Barlow Condensed',Arial;font-size:14px;font-weight:900;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${g.titulo}</div>
+            <div style="font-family:'Barlow Condensed',Arial;font-size:18px;font-weight:900;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${g.titulo}</div>
           </div>
           <!-- cuerpo -->
           <div style="flex:1;padding:9px 14px;display:flex;flex-direction:column;justify-content:space-between;overflow:hidden;background:#f2f2f2">
             <div>
-              <div style="font-size:10px;font-weight:700;color:#333;margin-bottom:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${g.publisher}</div>
-              <div style="font-size:10px;color:#444;line-height:1.45;overflow:hidden">${desc}</div>
+              <div style="font-size:14px;font-weight:700;color:#333;margin-bottom:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${g.publisher}</div>
+              <div style="font-size:14px;color:#444;line-height:1.45;overflow:hidden">${desc}</div>
             </div>
             <div style="display:flex;align-items:center;justify-content:space-between;gap:4px;margin-top:6px">
-              <div style="font-size:6px;color:#888;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1">${g.licencia}</div>
+              <div style="font-size:12px;color:#888;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1">${g.licencia}</div>
               <div style="display:flex;gap:2px;flex-shrink:0">
                 ${icoSmall(g.pc,          ICO.pc)}
                 ${icoSmall(g.mobile,      ICO.mobile)}
