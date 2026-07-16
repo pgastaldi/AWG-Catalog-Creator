@@ -348,91 +348,110 @@ function generatePDFHTML(svc, games, lang) {
   }
 
   // ── SLIDE individual — Nuevos / Destacados (1 juego por slide) ────────────
+  // Diseño "hero" a pantalla completa: la portada llena el fondo (difuminada)
+  // para que el juego destaque y no queden espacios vacíos; el póster nítido y
+  // la ficha de datos se apoyan sobre ese fondo cinematográfico.
   function slideGame(g, badge) {
-    const imgCol = `
-      <div style="width:420px;flex-shrink:0;position:relative;background:#000;overflow:hidden">
-        ${g.portada
-          ? `<img src="${g.portada}" style="width:100%;height:100%;object-fit:cover;display:block;opacity:.9"/>`
-          : `<div style="width:100%;height:100%;background:#222;display:flex;align-items:center;justify-content:center;font-size:80px;font-weight:900;color:${color};font-family:Arial;opacity:.3">${g.titulo[0]}</div>`
-        }
-        <!-- PEGI badge -->
-        <div style="position:absolute;top:14px;left:14px;background:#fff;border-radius:4px;padding:3px 6px;font-size:11px;font-weight:900;color:#222;line-height:1">${g.pegi}</div>
-        ${badge ? `<div style="position:absolute;top:14px;right:14px;background:${color};color:#fff;font-size:11px;font-weight:700;padding:4px 12px;border-radius:4px;letter-spacing:1px">${badge}</div>` : ""}
-      </div>`;
+    const poster = g.portada
+      ? `<img src="${g.portada}" style="width:100%;height:100%;object-fit:cover;display:block"/>`
+      : `<div style="width:100%;height:100%;background:#1a1a1a;display:flex;align-items:center;justify-content:center;font-family:'Barlow Condensed',Arial;font-size:120px;font-weight:900;color:${color};opacity:.5">${g.titulo[0]}</div>`;
 
-    const devices = `
-      <div style="display:flex;gap:18px;flex-wrap:wrap;padding-bottom:14px;border-bottom:2px solid ${color};margin-bottom:14px">
-        ${icoBlock(g.pc,     ICO.pc,     "PC")}
-        ${icoBlock(g.mobile, ICO.mobile, "Mobile")}
-        ${icoBlock(g.tv,     ICO.tv,     "TV")}
-        ${icoBlock(g.gamepad,   ICO.gamepad,   "Gamepad")}
-        ${icoBlock(g.teclado,   ICO.teclado,   "Keyboard")}
-        ${icoBlock(g.touchscreen,ICO.touch,    "Touch")}
-      </div>
-      <div style="display:flex;gap:18px;flex-wrap:wrap">
-        ${icoBlock(g.singleplayer,ICO.single,"Single Player")}
-        ${icoBlock(g.multiplayer, ICO.multi, "Multiplayer")}
-        ${icoBlock(g.multiOnline, ICO.online,"Online")}
-      </div>`;
-
-    const infoCol = `
-      <div style="flex:1;padding:32px 44px;display:flex;flex-direction:column;background:#f2f2f2;overflow:hidden">
-        <div style="font-size:12px;color:#888;font-weight:600;letter-spacing:1px;text-transform:uppercase;margin-bottom:3px">${g.publisher}</div>
-        <div style="font-size:11px;color:#666;font-weight:600;letter-spacing:.5px;text-transform:uppercase;margin-bottom:20px">${L.genre.toUpperCase()}: ${genreLabel(g.genero)}</div>
-        ${devices}
-        <div style="flex:1;font-size:17px;color:#222;line-height:1.75;margin-top:24px;overflow:hidden">${g.descripcion || ""}</div>
-        <div style="font-size:12px;font-weight:700;color:#444;letter-spacing:.5px;text-transform:uppercase;margin-top:16px;padding-top:12px;border-top:1px solid #ddd;flex-shrink:0">${g.licencia}</div>
-      </div>`;
+    // Íconos de plataformas y modos — cada uno solo aparece si el juego lo soporta
+    const feats = [
+      icoBlock(g.pc,          ICO.pc,     "PC"),
+      icoBlock(g.mobile,      ICO.mobile, "Mobile"),
+      icoBlock(g.tv,          ICO.tv,     "TV"),
+      icoBlock(g.gamepad,     ICO.gamepad,"Gamepad"),
+      icoBlock(g.teclado,     ICO.teclado,"Keyboard"),
+      icoBlock(g.touchscreen, ICO.touch,  "Touch"),
+      icoBlock(g.singleplayer,ICO.single, "Single Player"),
+      icoBlock(g.multiplayer, ICO.multi,  "Multiplayer"),
+      icoBlock(g.multiOnline,  ICO.online,"Online"),
+    ].filter(Boolean).join("");
 
     return `
-    <div class="slide" style="display:flex;flex-direction:column;background:${bg}">
-      <div style="background:${secondary};padding:14px 36px;display:flex;align-items:center;gap:16px;flex-shrink:0">
-        ${svc.logoImg ? `<img src="${svc.logoImg}" style="height:28px;object-fit:contain"/>` : ""}
-        <div style="font-family:'Barlow Condensed',Arial;font-size:28px;font-weight:900;color:#fff;letter-spacing:1px;text-transform:uppercase">${g.titulo}</div>
-      </div>
-      <div style="width:100px;height:4px;background:${color};margin-left:36px;flex-shrink:0"></div>
-      <div style="flex:1;display:flex;overflow:hidden">
-        ${imgCol}
-        ${infoCol}
+    <div class="slide" style="position:relative;background:${bg};overflow:hidden">
+      <!-- Fondo full-bleed: portada difuminada y oscurecida para llenar todo el lienzo -->
+      ${g.portada
+        ? `<img src="${g.portada}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;filter:blur(30px) brightness(.42);transform:scale(1.15)"/>`
+        : `<div style="position:absolute;inset:0;background:linear-gradient(135deg,${color}66 0%,#000 70%)"></div>`}
+      <div style="position:absolute;inset:0;background:linear-gradient(100deg,rgba(0,0,0,.82) 0%,rgba(0,0,0,.55) 42%,rgba(0,0,0,.28) 100%)"></div>
+
+      <!-- Contenido -->
+      <div style="position:relative;z-index:2;height:100%;display:flex;flex-direction:column">
+        <!-- Cabecera: logo del servicio + badge destacado -->
+        <div style="flex-shrink:0;padding:26px 52px 0;display:flex;align-items:center;justify-content:space-between">
+          <div style="display:flex;align-items:center;gap:14px">
+            ${svc.logoImg ? `<img src="${svc.logoImg}" style="height:30px;object-fit:contain"/>` : ""}
+            <span style="font-size:12px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:rgba(255,255,255,.55)">${L.catalog}</span>
+          </div>
+          ${badge ? `<div style="background:${color};color:#fff;font-family:'Barlow Condensed',Arial;font-size:16px;font-weight:900;letter-spacing:2px;text-transform:uppercase;padding:8px 22px;border-radius:30px">${badge}</div>` : ""}
+        </div>
+
+        <!-- Cuerpo: póster nítido + ficha -->
+        <div style="flex:1;display:flex;align-items:stretch;gap:44px;padding:28px 52px 40px;overflow:hidden">
+          <!-- Póster hero -->
+          <div style="width:400px;flex-shrink:0;position:relative;border-radius:14px;overflow:hidden;background:#000;box-shadow:0 24px 60px rgba(0,0,0,.65);border:1px solid rgba(255,255,255,.12)">
+            ${poster}
+            <div style="position:absolute;top:16px;left:16px;background:#fff;border-radius:5px;padding:4px 9px;font-size:14px;font-weight:900;color:#111;line-height:1">${g.pegi}</div>
+          </div>
+
+          <!-- Ficha del juego -->
+          <div style="flex:1;min-width:0;display:flex;flex-direction:column;justify-content:center;color:#fff;overflow:hidden">
+            <div style="font-size:15px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:${color};margin-bottom:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${g.publisher}</div>
+            <div style="font-family:'Barlow Condensed',Arial;font-size:58px;font-weight:900;line-height:.96;text-transform:uppercase;letter-spacing:1px;margin-bottom:16px">${g.titulo}</div>
+            <div style="align-self:flex-start;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.22);border-radius:20px;padding:5px 16px;font-size:13px;font-weight:600;letter-spacing:1px;text-transform:uppercase;margin-bottom:24px">${genreLabel(g.genero)}</div>
+            <div style="font-size:18px;line-height:1.7;color:rgba(255,255,255,.9);margin-bottom:28px;overflow:hidden;display:-webkit-box;-webkit-line-clamp:5;-webkit-box-orient:vertical">${g.descripcion || ""}</div>
+            <div style="display:flex;gap:28px;flex-wrap:wrap;align-items:flex-start;padding-top:22px;border-top:2px solid ${color}">
+              ${feats}
+            </div>
+            <div style="font-size:12px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:rgba(255,255,255,.5);margin-top:20px">${g.licencia}</div>
+          </div>
+        </div>
       </div>
     </div>`;
   }
 
   // ── SLIDE Más Jugados — 3 por slide ───────────────────────────────────────
+  // Mismo lenguaje que el hero: tarjetas de vidrio oscuro, póster redondeado,
+  // publisher en color de acento y línea de acento sobre los íconos.
   function slideTop3(group) {
+    // Ícono compacto con label (una sola fila) — solo si el juego lo soporta
+    const featIco = (show, path, label) => show
+      ? `<div style="display:flex;flex-direction:column;align-items:center;gap:2px">${icoSm(path)}<span style="font-size:8px;font-weight:700;color:${color};letter-spacing:.5px">${label}</span></div>`
+      : "";
     const cards = group.map(g => {
-      const desc = g.descripcion && g.descripcion.length > 120
-        ? g.descripcion.slice(0, 120).trimEnd() + "…"
-        : (g.descripcion || "");
+      const desc = g.descripcion || "";
       return `
-      <div style="flex:1;background:#f2f2f2;border-radius:8px;overflow:hidden;display:flex;flex-direction:column">
-        <!-- imagen con ratio 3:4 fijo sin corte -->
-        <div style="position:relative;width:100%;padding-top:100%;flex-shrink:0;overflow:hidden;background:#ddd">
+      <div style="flex:1;min-width:0;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:12px;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 14px 34px rgba(0,0,0,.45)">
+        <!-- póster superior -->
+        <div style="position:relative;width:100%;padding-top:100%;flex-shrink:0;overflow:hidden;background:#000">
           ${g.portada
-            ? `<img src="${g.portada}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:contain;display:block"/>`
-            : `<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:48px;font-weight:900;color:${color};opacity:.3">${g.titulo[0]}</div>`
+            ? `<img src="${g.portada}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;filter:blur(18px) brightness(.55);transform:scale(1.15)"/>
+               <img src="${g.portada}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:contain;display:block"/>`
+            : `<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:'Barlow Condensed',Arial;font-size:60px;font-weight:900;color:${color};opacity:.5">${g.titulo[0]}</div>`
           }
-          <div style="position:absolute;top:8px;left:8px;background:#fff;border-radius:3px;padding:2px 5px;font-size:10px;font-weight:900;color:#222">${g.pegi}</div>
+          <div style="position:absolute;inset:0;background:linear-gradient(to bottom,rgba(0,0,0,.12) 0%,transparent 35%)"></div>
+          <div style="position:absolute;top:10px;left:10px;background:#fff;border-radius:4px;padding:2px 7px;font-size:11px;font-weight:900;color:#111">${g.pegi}</div>
         </div>
-        <div style="padding:10px 14px;flex:1;display:flex;flex-direction:column;justify-content:space-between;overflow:hidden">
-          <div>
-            <div style="font-family:'Barlow Condensed',Arial;font-size:18px;font-weight:900;color:#111;margin-bottom:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${g.titulo}</div>
-            <div style="font-size:10px;color:#888;margin-bottom:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${g.publisher}</div>
-            <!-- íconos compactos en una sola fila -->
-            <div style="display:flex;gap:6px;flex-wrap:wrap;padding-bottom:7px;border-bottom:2px solid ${color};margin-bottom:6px">
-              ${g.pc      ? `<div style="display:flex;flex-direction:column;align-items:center;gap:2px">${icoSm(ICO.pc)}<span style="font-size:8px;font-weight:700;color:${color};letter-spacing:.5px">PC</span></div>` : ""}
-              ${g.mobile  ? `<div style="display:flex;flex-direction:column;align-items:center;gap:2px">${icoSm(ICO.mobile)}<span style="font-size:8px;font-weight:700;color:${color};letter-spacing:.5px">Mobile</span></div>` : ""}
-              ${g.tv      ? `<div style="display:flex;flex-direction:column;align-items:center;gap:2px">${icoSm(ICO.tv)}<span style="font-size:8px;font-weight:700;color:${color};letter-spacing:.5px">TV</span></div>` : ""}
-              ${g.gamepad ? `<div style="display:flex;flex-direction:column;align-items:center;gap:2px">${icoSm(ICO.gamepad)}<span style="font-size:8px;font-weight:700;color:${color};letter-spacing:.5px">Gamepad</span></div>` : ""}
-              ${g.teclado ? `<div style="display:flex;flex-direction:column;align-items:center;gap:2px">${icoSm(ICO.teclado)}<span style="font-size:8px;font-weight:700;color:${color};letter-spacing:.5px">Keyboard</span></div>` : ""}
-              ${g.touchscreen ? `<div style="display:flex;flex-direction:column;align-items:center;gap:2px">${icoSm(ICO.touch)}<span style="font-size:8px;font-weight:700;color:${color};letter-spacing:.5px">Touch</span></div>` : ""}
-              ${g.singleplayer ? `<div style="display:flex;flex-direction:column;align-items:center;gap:2px">${icoSm(ICO.single)}<span style="font-size:8px;font-weight:700;color:${color};letter-spacing:.5px">1P</span></div>` : ""}
-              ${g.multiplayer  ? `<div style="display:flex;flex-direction:column;align-items:center;gap:2px">${icoSm(ICO.multi)}<span style="font-size:8px;font-weight:700;color:${color};letter-spacing:.5px">Multi</span></div>` : ""}
-              ${g.multiOnline  ? `<div style="display:flex;flex-direction:column;align-items:center;gap:2px">${icoSm(ICO.online)}<span style="font-size:8px;font-weight:700;color:${color};letter-spacing:.5px">Online</span></div>` : ""}
-            </div>
-            <div style="font-size:11px;color:#444;line-height:1.5;overflow:hidden">${desc}</div>
+        <!-- cuerpo -->
+        <div style="padding:14px 16px 13px;flex:1;display:flex;flex-direction:column;color:#fff;min-width:0">
+          <div style="font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:${color};margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${g.publisher}</div>
+          <div style="font-family:'Barlow Condensed',Arial;font-size:21px;font-weight:900;color:#fff;line-height:1.02;margin-bottom:9px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${g.titulo}</div>
+          <!-- íconos compactos en una sola fila -->
+          <div style="display:flex;gap:8px;flex-wrap:wrap;padding-top:9px;border-top:2px solid ${color};margin-bottom:9px">
+            ${featIco(g.pc,          ICO.pc,     "PC")}
+            ${featIco(g.mobile,      ICO.mobile, "Mobile")}
+            ${featIco(g.tv,          ICO.tv,     "TV")}
+            ${featIco(g.gamepad,     ICO.gamepad,"Gamepad")}
+            ${featIco(g.teclado,     ICO.teclado,"Keyboard")}
+            ${featIco(g.touchscreen, ICO.touch,  "Touch")}
+            ${featIco(g.singleplayer,ICO.single, "1P")}
+            ${featIco(g.multiplayer, ICO.multi,  "Multi")}
+            ${featIco(g.multiOnline,  ICO.online,"Online")}
           </div>
-          <div style="font-size:9px;font-weight:700;color:#888;text-transform:uppercase;margin-top:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${g.licencia}</div>
+          <div style="font-size:12px;color:rgba(255,255,255,.8);line-height:1.55;overflow:hidden;display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical">${desc}</div>
+          <div style="font-size:9px;font-weight:700;color:rgba(255,255,255,.45);text-transform:uppercase;letter-spacing:.5px;margin-top:auto;padding-top:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${g.licencia}</div>
         </div>
       </div>`; }).join("");
 
@@ -443,7 +462,7 @@ function generatePDFHTML(svc, games, lang) {
         <div style="font-family:'Barlow Condensed',Arial;font-size:28px;font-weight:900;color:#fff;letter-spacing:1px;text-transform:uppercase">${L.top}</div>
       </div>
       <div style="width:100px;height:4px;background:${color};margin-left:36px;flex-shrink:0"></div>
-      <div style="flex:1;display:flex;gap:16px;padding:20px 36px;overflow:hidden">
+      <div style="flex:1;display:flex;gap:20px;padding:24px 36px;overflow:hidden">
         ${cards}
       </div>
     </div>`;
@@ -457,47 +476,39 @@ function generatePDFHTML(svc, games, lang) {
         //: (g.descripcion || "");
       const maintBanner = g.mantenimiento ? `
         <!-- tarjeta de mantenimiento por encima de la card -->
-        <div style="position:absolute;inset:0;z-index:5;background:rgba(10,10,10,.78);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;border-radius:6px">
+        <div style="position:absolute;inset:0;z-index:5;background:rgba(8,8,8,.82);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px">
           <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18v3h3l6.3-6.3a4 4 0 0 0 5.4-5.4l-2.6 2.6-2-2 2.6-2.6Z"/></svg>
           <div style="font-family:'Barlow Condensed',Arial;font-size:18px;font-weight:900;color:#fff;letter-spacing:1.5px;text-transform:uppercase;text-align:center;padding:0 10px">${L.maintenance}</div>
           <div style="width:40px;height:3px;background:${color}"></div>
         </div>` : "";
       return `
-      <div style="position:relative;background:#f2f2f2;border-radius:6px;overflow:hidden;display:flex;align-items:stretch">
+      <div style="position:relative;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:10px;overflow:hidden;display:flex;align-items:stretch;box-shadow:0 10px 26px rgba(0,0,0,.4)">
         ${maintBanner}
         <!-- imagen izquierda — altura completa de la card -->
-        <div style="flex-shrink:0;position:relative;overflow:hidden;background:#ddd;display:flex;align-items:stretch">
+        <div style="width:156px;flex-shrink:0;position:relative;overflow:hidden;background:#000">
           ${g.portada
-            ? `<img src="${g.portada}" style="display:block;width:auto;height:100%;max-width:256px;object-fit:cover"/>`
-            : `<div style="width:100px;height:100%;display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:900;color:${color};opacity:.3">${g.titulo[0]}</div>`
+            ? `<img src="${g.portada}" style="display:block;width:100%;height:100%;object-fit:cover"/>`
+            : `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-family:'Barlow Condensed',Arial;font-size:40px;font-weight:900;color:${color};opacity:.5">${g.titulo[0]}</div>`
           }
-          <div style="position:absolute;top:5px;left:5px;background:#fff;border-radius:2px;padding:1px 5px;font-size:8px;font-weight:900;color:#222;z-index:1">${g.pegi}</div>
+          <div style="position:absolute;top:6px;left:6px;background:#fff;border-radius:3px;padding:1px 6px;font-size:9px;font-weight:900;color:#111;z-index:1">${g.pegi}</div>
         </div>
-        <!-- info derecha: header oscuro arriba + cuerpo claro abajo -->
-        <div style="flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0">
-          <!-- título en header oscuro -->
-          <div style="background:${secondary};padding:10px 14px 9px">
-            <div style="font-family:'Barlow Condensed',Arial;font-size:18px;font-weight:900;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${g.titulo}</div>
-          </div>
-          <!-- cuerpo -->
-          <div style="flex:1;padding:9px 14px;display:flex;flex-direction:column;justify-content:space-between;overflow:hidden;background:#f2f2f2">
-            <div>
-              <div style="font-size:14px;font-weight:700;color:#333;margin-bottom:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${g.publisher}</div>
-              <div style="font-size:14px;color:#444;line-height:1.45;overflow:hidden">${desc}</div>
-            </div>
-            <div style="display:flex;align-items:center;justify-content:space-between;gap:4px;margin-top:6px">
-              <div style="font-size:12px;color:#888;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1">${g.licencia}</div>
-              <div style="display:flex;gap:2px;flex-shrink:0">
-                ${icoSmall(g.pc,          ICO.pc)}
-                ${icoSmall(g.mobile,      ICO.mobile)}
-                ${icoSmall(g.tv,          ICO.tv)}
-                ${icoSmall(g.singleplayer,ICO.single)}
-                ${icoSmall(g.multiplayer, ICO.multi)}
-                ${icoSmall(g.multiOnline, ICO.online)}
-                ${icoSmall(g.gamepad,     ICO.gamepad)}
-                ${icoSmall(g.teclado,     ICO.teclado)}
-                ${icoSmall(g.touchscreen, ICO.touch)}
-              </div>
+        <!-- info derecha -->
+        <div style="flex:1;min-width:0;padding:12px 14px;display:flex;flex-direction:column;color:#fff;overflow:hidden">
+          <div style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:${color};margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${g.publisher}</div>
+          <div style="font-family:'Barlow Condensed',Arial;font-size:19px;font-weight:900;color:#fff;line-height:1.03;margin-bottom:7px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${g.titulo}</div>
+          <div style="font-size:14px;color:rgba(255,255,255,.78);line-height:1.45;overflow:hidden">${desc}</div>
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:6px;margin-top:auto;padding-top:9px;border-top:2px solid ${color}">
+            <div style="font-size:10px;color:rgba(255,255,255,.45);font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1">${g.licencia}</div>
+            <div style="display:flex;gap:4px;flex-shrink:0;align-items:center">
+              ${icoSmall(g.pc,          ICO.pc)}
+              ${icoSmall(g.mobile,      ICO.mobile)}
+              ${icoSmall(g.tv,          ICO.tv)}
+              ${icoSmall(g.singleplayer,ICO.single)}
+              ${icoSmall(g.multiplayer, ICO.multi)}
+              ${icoSmall(g.multiOnline, ICO.online)}
+              ${icoSmall(g.gamepad,     ICO.gamepad)}
+              ${icoSmall(g.teclado,     ICO.teclado)}
+              ${icoSmall(g.touchscreen, ICO.touch)}
             </div>
           </div>
         </div>
@@ -512,7 +523,7 @@ function generatePDFHTML(svc, games, lang) {
         <div style="font-size:13px;color:#888;margin-left:8px">${isFirst ? `${gs.length} ${L.games}` : ""}</div>
       </div>
       <div style="width:100px;height:4px;background:${color};margin-left:36px;flex-shrink:0"></div>
-      <div style="flex:1;display:grid;grid-template-columns:1fr 1fr 1fr;grid-template-rows:1fr 1fr;gap:12px;padding:16px 36px;overflow:hidden">
+      <div style="flex:1;display:grid;grid-template-columns:1fr 1fr 1fr;grid-template-rows:1fr 1fr;gap:14px;padding:18px 36px;overflow:hidden">
         ${cards}
       </div>
     </div>`;
@@ -616,7 +627,7 @@ window.addEventListener('resize', scale);
 
 ${cover}
 ${nuevos.map(g => slideGame(g, L.newBadge || "¡NUEVO!")).join("\n")}
-${destacados.map(g => slideGame(g, null)).join("\n")}
+${destacados.map(g => slideGame(g, (L.featured || "Destacado").toUpperCase())).join("\n")}
 ${topSlides.join("\n")}
 ${genreSlides.join("\n")}
 ${backcover}
