@@ -751,10 +751,16 @@ body{background:var(--main-bg);color:var(--tx);font-family:var(--ff);font-size:1
 #pov.open{display:flex}
 #pop{background:var(--s1);border:1px solid var(--bd2);border-radius:16px;max-width:820px;width:100%;overflow:hidden;animation:pi .18s ease;position:relative;display:flex;flex-direction:column;max-height:92vh}
 @keyframes pi{from{opacity:0;transform:scale(.95)}to{opacity:1;transform:scale(1)}}
-#pt{display:flex;flex-shrink:0;min-height:0}#pcol{width:240px;flex-shrink:0;position:relative}
-#pim{width:100%;aspect-ratio:3/4;object-fit:cover;display:block}
-#pph{width:100%;aspect-ratio:3/4;background:var(--s3);display:none;align-items:center;justify-content:center;font-family:var(--ff);font-size:76px;font-weight:800;color:var(--br);opacity:.2}
-#pnvb{position:absolute;top:10px;left:10px;background:var(--br);color:var(--onbr);font-size:11px;font-weight:700;padding:4px 10px;border-radius:4px;letter-spacing:1.2px;display:none}
+/* --pcp separa la portada del borde del modal para que no la recorte el redondeo */
+#pt{display:flex;flex-shrink:0;min-height:0}#pcol{--pcp:16px;width:calc(240px + var(--pcp));flex-shrink:0;position:relative;padding:var(--pcp) 0 0 var(--pcp)}
+/* La portada se ve COMPLETA sin bandas: el contenedor no impone proporción, toma
+   la altura natural de la imagen a 240px de ancho. El fondo difuminado solo asoma
+   en el caso extremo de una portada tan alta que choque con el max-height. */
+#piw{position:relative;width:100%;overflow:hidden;background:var(--s3);display:block;line-height:0;border-radius:10px}
+#pbg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;filter:blur(20px) brightness(.45);transform:scale(1.25)}
+#pim{position:relative;z-index:1;display:block;width:100%;height:auto;max-height:70vh;object-fit:contain}
+#pph{width:100%;aspect-ratio:3/4;background:var(--s3);border-radius:10px;display:none;align-items:center;justify-content:center;font-family:var(--ff);font-size:76px;font-weight:800;color:var(--br);opacity:.2}
+#pnvb{position:absolute;top:calc(var(--pcp) + 10px);left:calc(var(--pcp) + 10px);background:var(--br);color:var(--onbr);font-size:11px;font-weight:700;padding:4px 10px;border-radius:4px;letter-spacing:1.2px;display:none;z-index:3}
 #pmeta{flex:1;padding:22px 24px 18px;display:flex;flex-direction:column;gap:14px;overflow-y:auto;min-width:0}
 #ptit{font-family:var(--ff);font-size:30px;font-weight:800;letter-spacing:-.6px;line-height:1.12}#ppub{font-size:15px;color:var(--mu);margin-top:4px}
 #ptgs{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
@@ -768,7 +774,7 @@ body{background:var(--main-bg);color:var(--tx);font-family:var(--ff);font-size:1
 #pcta{flex-shrink:0;background:var(--br);color:var(--onbr);border:none;border-radius:8px;padding:13px 26px;font-family:var(--ff);font-size:16px;font-weight:700;cursor:pointer;white-space:nowrap;transition:opacity .15s;letter-spacing:-.1px}
 #pcta:hover{opacity:.85}
 #pcls{position:absolute;top:10px;right:10px;width:30px;height:30px;background:rgba(0,0,0,.6);border:1px solid var(--bd2);border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--mu);font-size:14px;z-index:10;transition:all .15s;backdrop-filter:blur(4px)}
-#pcls:hover{color:var(--tx)}
+#pcls:hover{background:#e02a2a;border-color:#e02a2a;color:#fff}
 #emp{display:none;text-align:center;padding:48px 20px;color:var(--mu);font-size:15px}
 #emp p{font-family:var(--ff);font-size:21px;font-weight:700;letter-spacing:-.3px;color:var(--tx);margin-bottom:7px}
 ::-webkit-scrollbar{width:3px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:var(--s3);border-radius:2px}
@@ -780,7 +786,7 @@ body{background:var(--main-bg);color:var(--tx);font-family:var(--ff);font-size:1
   .glg{grid-template-columns:repeat(2,1fr);gap:11px}.gmd{grid-template-columns:repeat(2,1fr);gap:11px}.gsm{grid-template-columns:repeat(2,1fr);gap:10px}.tit{font-size:22px}
   .ct{font-size:15px}.cp{font-size:12px}.ctg{font-size:10px}
   #pov{padding:0;align-items:flex-end}#pop{border-radius:16px 16px 0 0;max-height:95vh;max-width:100%}
-  #pt{flex-direction:column}#pcol{width:100%}#pim{aspect-ratio:16/9;object-fit:cover}#pph{aspect-ratio:16/9}
+  #pt{flex-direction:column}#pcol{--pcp:12px;width:100%;padding:var(--pcp) var(--pcp) 0}#pim{max-height:40vh}#pph{aspect-ratio:16/9}
   #pmeta{padding:16px 16px 12px;gap:12px}#ptit{font-size:24px}#pbot{padding:14px 16px;flex-wrap:wrap;gap:10px}
   #pdsc{max-height:70px;font-size:14px}#pcta{width:100%;justify-content:center;text-align:center}
 }
@@ -837,7 +843,7 @@ body{background:var(--main-bg);color:var(--tx);font-family:var(--ff);font-size:1
   <div id="pop">
     <button id="pcls" onclick="cp()">✕</button>
     <div id="pt">
-      <div id="pcol"><img id="pim" src=""/><div id="pph"></div><div id="pnvb">${L.newBadge}</div></div>
+      <div id="pcol"><div id="piw"><img id="pbg" src="" aria-hidden="true"/><img id="pim" src=""/></div><div id="pph"></div><div id="pnvb">${L.newBadge}</div></div>
       <div id="pmeta">
         <div><div id="ptit"></div><div id="ppub"></div></div>
         <div id="ptgs"></div>
@@ -873,13 +879,46 @@ function mkcard(g){const d=document.createElement("div");d.className="card";cons
 function rend(gid,sid,games,cid){const gr=document.getElementById(gid),sec=document.getElementById(sid);gr.innerHTML="";sec.style.display=games.length?"block":"none";document.getElementById(cid).textContent=games.length?\`\${games.length} \${T.games}\`:"";games.forEach(g=>gr.appendChild(mkcard(g)));}
 function run(){ucl();const filt=G.filter(match);const isF=document.getElementById("si").value||Object.values(AF).some(a=>a.length);rend("gnv","snv",isF?[]:filt.filter(g=>g.nv),"cnv");rend("gde","sde",isF?[]:filt.filter(g=>g.de),"cde");rend("gtp","stp",isF?[]:filt.filter(g=>g.mj),"ctp");rend("gal","sal",filt,"cal");document.getElementById("atit").textContent=isF?T.results:T.all;document.getElementById("gc").textContent=\`\${filt.length} \${T.games}\`;document.getElementById("emp").style.display=filt.length===0?"block":"none";}
 function picoRow(rowId,secId,items){const html=items.filter(x=>x.show).map(x=>\`<div class="pico">\${mksvg(D[x.key])}<span>\${x.label}</span></div>\`).join("");document.getElementById(rowId).innerHTML=html;document.getElementById(secId).style.display=html?"flex":"none";}
-function op(g){const im=document.getElementById("pim"),ph=document.getElementById("pph");if(g.i){im.src=g.i;im.style.display="block";ph.style.display="none";}else{im.style.display="none";ph.style.display="flex";ph.textContent=g.t[0];}document.getElementById("pnvb").style.display=g.nv?"block":"none";document.getElementById("ptit").textContent=g.t;document.getElementById("ppub").textContent=g.p;document.getElementById("ptgs").innerHTML=\`\${g.gs.map(x=>\`<span class="ptag genre">\${x}</span>\`).join("")}<span class="ptag pegi">\${T.pegi} \${g.pe}+</span><span class="ptag lic">\${g.l}</span>\${g.free?\`<span class="ptag free">\${T.free}</span>\`:""}\`;picoRow("rjug","sjug",[{show:g.sp,key:"single",label:T.singlePlayer},{show:g.mp,key:"multi",label:T.multiplayer},{show:g.mo,key:"online",label:T.online}]);picoRow("rdev","sdev",[{show:g.pc,key:"pc",label:"PC"},{show:g.mob,key:"mobile",label:T.mobile},{show:g.tv,key:"tv",label:"TV"}]);picoRow("rctrl","sctrl",[{show:g.gp,key:"gamepad",label:"Gamepad"},{show:g.tk,key:"teclado",label:T.keyboard},{show:g.ts,key:"touch",label:"Touch"}]);document.getElementById("pdsc").textContent=g.d;document.getElementById("pcta").onclick=()=>window.open(SVC_LINK,"_blank");document.getElementById("pov").classList.add("open");}
+function op(g){const iw=document.getElementById("piw"),im=document.getElementById("pim"),bg=document.getElementById("pbg"),ph=document.getElementById("pph");if(g.i){im.src=g.i;bg.src=g.i;iw.style.display="block";ph.style.display="none";}else{iw.style.display="none";ph.style.display="flex";ph.textContent=g.t[0];}document.getElementById("pnvb").style.display=g.nv?"block":"none";document.getElementById("ptit").textContent=g.t;document.getElementById("ppub").textContent=g.p;document.getElementById("ptgs").innerHTML=\`\${g.gs.map(x=>\`<span class="ptag genre">\${x}</span>\`).join("")}<span class="ptag pegi">\${T.pegi} \${g.pe}+</span><span class="ptag lic">\${g.l}</span>\${g.free?\`<span class="ptag free">\${T.free}</span>\`:""}\`;picoRow("rjug","sjug",[{show:g.sp,key:"single",label:T.singlePlayer},{show:g.mp,key:"multi",label:T.multiplayer},{show:g.mo,key:"online",label:T.online}]);picoRow("rdev","sdev",[{show:g.pc,key:"pc",label:"PC"},{show:g.mob,key:"mobile",label:T.mobile},{show:g.tv,key:"tv",label:"TV"}]);picoRow("rctrl","sctrl",[{show:g.gp,key:"gamepad",label:"Gamepad"},{show:g.tk,key:"teclado",label:T.keyboard},{show:g.ts,key:"touch",label:"Touch"}]);document.getElementById("pdsc").textContent=g.d;document.getElementById("pcta").onclick=()=>window.open(SVC_LINK,"_blank");document.getElementById("pov").classList.add("open");}
 function cp(){document.getElementById("pov").classList.remove("open");}
 document.addEventListener("keydown",e=>{if(e.key==="Escape")cp();});
 run();
 <\/script>
 </body>
 </html>`;
+}
+
+// ─── CAMPO DE COLOR ───────────────────────────────────────────────────────────
+// Swatch + hex editable: se puede pegar/escribir "#ff0000", "ff0000" o "#f00".
+// Mientras se edita se guarda el texto crudo en "draft" (así se puede borrar y
+// reescribir sin que React lo pise); solo se propaga cuando el hex es válido.
+function normHex(raw) {
+  let s = (raw || "").trim().replace(/^#/, "");
+  if (/^[0-9a-fA-F]{3}$/.test(s)) s = s.split("").map(c => c + c).join("");
+  return /^[0-9a-fA-F]{6}$/.test(s) ? "#" + s.toLowerCase() : null;
+}
+function ColorField({ value, fallback, onChange, allowEmpty, placeholder }) {
+  const [draft, setDraft] = useState(null);
+  const current = value || fallback;
+  const text = draft !== null ? draft : (value || "");
+  const invalid = draft !== null && draft.trim() !== "" && !normHex(draft);
+  return (
+    <div style={{ display:"flex", gap:8, alignItems:"center" }}>
+      <input type="color" value={current}
+        onChange={e => { setDraft(null); onChange(e.target.value); }}
+        style={{ width:36, height:36, border:"1px solid #ddd", borderRadius:6, cursor:"pointer", padding:2, flexShrink:0 }}/>
+      <input type="text" value={text} spellCheck={false} placeholder={placeholder || fallback}
+        onChange={e => { const v = e.target.value; setDraft(v); const h = normHex(v); if (h) onChange(h); }}
+        onFocus={e => e.target.select()}
+        onBlur={e => {
+          const v = e.target.value.trim();
+          if (allowEmpty && v === "") onChange("");
+          setDraft(null);
+        }}
+        style={{ width:96, fontSize:12, fontFamily:"monospace", textTransform:"lowercase",
+                 border:`1px solid ${invalid ? "#e05a5a" : "#ddd"}`, borderRadius:6, padding:"7px 8px", outline:"none", color:"#444" }}/>
+    </div>
+  );
 }
 
 // ─── MAIN COMPONENT ───────────────────────────────────────────────────────────
@@ -1311,18 +1350,15 @@ export default function CatalogAgent() {
                 ["Color secundario (portada/contraportada PDF)", "secondaryColor","#ffffff"],
               ].map(([lbl, fld, def]) => (
                 <div key={fld}><label style={lblSt}>{lbl}</label>
-                  <div style={{ display:"flex", gap:8, alignItems:"center" }}>
-                    <input type="color" value={form[fld] || def} onChange={e => setForm(f => ({...f, [fld]:e.target.value}))} style={{ width:36, height:36, border:"1px solid #ddd", borderRadius:6, cursor:"pointer", padding:2 }}/>
-                    <span style={{ fontSize:12, color:"#666", fontFamily:"monospace" }}>{form[fld] || def}</span>
-                  </div>
+                  <ColorField value={form[fld]} fallback={def} onChange={v => setForm(f => ({...f, [fld]:v}))}/>
                 </div>
               ))}
             </div>
             <div style={{ marginTop:10 }}>
               <label style={lblSt}>Color de tipografía (opcional — se auto-detecta según el fondo)</label>
               <div style={{ display:"flex", gap:10, alignItems:"center", marginTop:4 }}>
-                <input type="color" value={form.textColor || "#f0f0f8"} onChange={e => setForm(f => ({...f, textColor:e.target.value}))} style={{ width:36, height:36, border:"1px solid #ddd", borderRadius:6, cursor:"pointer", padding:2 }}/>
-                <span style={{ fontSize:12, color:"#666", fontFamily:"monospace" }}>{form.textColor || "auto"}</span>
+                <ColorField value={form.textColor} fallback="#f0f0f8" placeholder="auto" allowEmpty
+                  onChange={v => setForm(f => ({...f, textColor:v}))}/>
                 {form.textColor && (
                   <button onClick={() => setForm(f => ({...f, textColor:""}))} style={{ fontSize:11, color:"#888", background:"#f0f0f0", border:"none", borderRadius:5, padding:"3px 8px", cursor:"pointer" }}>
                     Restablecer auto
